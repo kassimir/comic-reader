@@ -1,0 +1,14 @@
+{
+  "name": "comic-reader",
+  "version": "1.0.0",
+  "description": "A minimal Electron application",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "repository": "https://github.com/kassimir/comic-reader",
+  "author": "kassimir",
+  "devDependencies": {
+    "electron": "^1.8.4"
+  }
+}
