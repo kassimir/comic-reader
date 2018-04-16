@@ -1,0 +1,19 @@
+#hidden { visibility: hidden; }
+
+#nav {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 55px;
+    background: linear-gradient(#710824, #6C0722, #660620, #63061F, #5E051D);
+}
+
+#reader {
+    position: absolute;
+    top: 55px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: black;
+}
