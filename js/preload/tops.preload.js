@@ -2,6 +2,8 @@ const ipc = require('electron').ipcRenderer
 const send = (msg, channel = 'default') => ipc.sendToHost(channel, msg)
 
 window.onload = function() {
+  // Keeps all the data scraping asynchronous and allows
+  // to know when it's completed without using counters
   Promise.all([
     Promise.resolve(getData('tab-newest')),
     Promise.resolve(getData('tab-top-day')),
@@ -11,7 +13,7 @@ window.onload = function() {
     Promise.resolve(getLatest())
   ]).then(() => send('done', 'end'))
 }
-
+// Most the sections have the same layout with different id's
 function getData(id) {
   const tops = document.getElementById(id)
   Array.from(tops.children).forEach( div => {
@@ -29,7 +31,8 @@ function getData(id) {
     send(res, id)
   })
 }
-
+// Latest Updated is not one of those sections, so it gets
+// its own function
 function getLatest() {
   const latest = document.getElementsByClassName('items')[0].children
   Array.from(latest).forEach( outer => {

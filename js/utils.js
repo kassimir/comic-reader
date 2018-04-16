@@ -29,14 +29,11 @@ const create = (ele, attrs, listeners) => {
       if (attrs.hasOwnProperty(key)) {
         if (typeof attrs[key] === 'object') {
           for (let k in attrs[key]) {
-            if (attrs[key].hasOwnProperty(k) && e.hasOwnProperty(key)) e[key][k] = attrs[key][k]
-            else if (attrs[key].hasOwnProperty(key) && !e.hasOwnProperty(key)) {
-              e[key] = {}
-              e[key][k] = attrs[key][k]
-            }
+            e[key][k] = attrs[key][k]
           }
         } else {
-          e[key] = attrs[key]
+          if (key === 'class') e.classList.add(attrs[key])
+          else e[key] = attrs[key]
         }
       }
     }
