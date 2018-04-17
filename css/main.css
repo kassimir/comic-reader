@@ -19,16 +19,24 @@
     overflow-y: auto;
 }
 
+.link:hover {
+    text-decoration: underline;
+    cursor: pointer;
+}
+
 .carousel-outer {
     overflow-x: scroll;
     width: 100%;
     height: auto;
+    margin: 20px 0;
 }
 
 .carousel-inner {
     display: flex;
     flex-direction: row;
-    margin-bottom: 20px;
+    margin: 20px;
+    color: white;
+    text-align: center;
 }
 
 /*SCROLL BAR*/

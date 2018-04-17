@@ -1,5 +1,4 @@
-const ipc = require('electron').ipcRenderer
-const send = (msg, channel = 'default') => ipc.sendToHost(channel, msg)
+const send = require('../utils.js').send
 
 window.onload = function() {
   // Keeps all the data scraping asynchronous and allows
@@ -19,9 +18,9 @@ function getData(id) {
   Array.from(tops.children).forEach( div => {
     const res = {}
     Array.from(div.children).forEach( inner => {
-      if (inner.href && inner.children[0]) {
+      if (inner.href && inner.children[0] && inner.innerText !== 'More...') {
         if (inner.children[0].nodeName === 'IMG') {
-          res.link = inner.href
+          res.link = checkHref(inner.href)
           res.img = inner.children[0].src
         } else {
           res.title = inner.children[0].textContent
@@ -39,8 +38,27 @@ function getLatest() {
     Array.from(outer.children).forEach( inner => {
       const link = inner.href
       const img = inner.children[0].src || inner.children[0].getAttribute('srctemp')
-      const title = inner.innerText
+      const title = removeIssue(inner.innerText)
       send({link: link, img: img, title: title.trim()}, 'latest')
     })
   })
+}
+
+function removeIssue(txt, ind) {
+  if (!ind) ind = 0
+  // TODO: There are some comics that just have the title and issue: SEE DEADPOOL (1997) -1
+  txt = txt.replace(/[\n,\r]/g, ' ')
+  const possibilities = ['Issue', 'Full', 'TPB', 'Special', '_Special', 'Annual', '_Annual']
+  const regex = `${possibilities[ind]}(?!.*${possibilities[ind]})`
+  if (txt.match(regex)) return txt.substr(0, txt.match(regex).index - 1)
+  else if (ind === possibilities.length) return txt
+  else return removeIssue(txt, ind + 1)
+}
+
+function checkHref(lnk) {
+  // send(lnk, 'msg')
+  if (!lnk.includes('http://readcomiconline.to')) {
+    send(lnk, 'msg')
+    return `http://readcomiconline.to/${link}`
+  }
 }

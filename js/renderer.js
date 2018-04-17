@@ -1,4 +1,8 @@
 const Tile = require('./js/models/tile.model')
+const utils = require('./js/utils.js')
+const qi = utils.qi
+const q = utils.q
+const create = utils.create
 
 // Hidden div for rendering pages in the background
 const hidden = qi('hidden')
@@ -30,7 +34,7 @@ function mainRender() {
       default: console.log(e);
     }
   }
-  bgRender('http://readcomiconline.to', 'js/preload/tops.preload.js', {'ipc-message': ipcMessage})
+  bgRender('http://readcomiconline.to', 'js/preload/tops.preload.js', {'ipc-message': ipcMessage, 'console-message': e => console.log(e.message)})
 }
 
 window.onload = function() {
@@ -44,19 +48,23 @@ function bgRender(src, preload, listeners) {
 
 function buildTiles() {
   hidden.removeChild(q('webview'))
-  const carousel = () => create('div', {class: 'carousel-outer', style: {'margin-bottom': '35px'}})
+  const carousel = () => create('div', {class: 'carousel-outer'})
 
   for (let section in frontPage) {
+    function navigation(e) {
+      console.log(e.target.dataset.link)
+    }
     const c = carousel()
     c.id = section
-    const div = create('div', {class: 'carousel-inner'})
-    div.style.width = Object.keys(frontPage[section]).length * 20 + '%'
+    const div = create('div', {class: 'carousel-inner', style: {width: Object.keys(frontPage[section]).length * 20 + '%'}}, {'click': navigation})
     reader.appendChild(c)
 
     for (let item in frontPage[section]) {
       const container = create('div', {style: {display: 'flex', 'flex-direction': 'column'}})
-      const img = create('img', {src: frontPage[section][item].img, style: {width: '20vw', margin: '0 2.25vw'}})
+      const img = create('img', {'data-link': frontPage[section][item].link, class: 'link', src: frontPage[section][item].img, style: {width: '20vw', margin: '0 2.25vw'}})
+      const title = create('span', {'data-link': frontPage[section][item].link, class: 'link', innerText: item, style: {color: 'white', margin: '7px'}})
       container.appendChild(img)
+      container.appendChild(title)
       div.appendChild(container)
       c.appendChild(div)
     }
