@@ -18,7 +18,7 @@ function getData(id) {
   Array.from(tops.children).forEach( div => {
     const res = {}
     Array.from(div.children).forEach( inner => {
-      if (inner.href && inner.children[0] && inner.innerText !== 'More...') {
+      if (inner.href && inner.children && inner.innerText !== 'More...') {
         if (inner.children[0].nodeName === 'IMG') {
           res.link = checkHref(inner.href)
           res.img = inner.children[0].src
@@ -27,7 +27,7 @@ function getData(id) {
         }
       }
     })
-    send(res, id)
+    if (Object.keys(res).length) send(res, id)
   })
 }
 // Latest Updated is not one of those sections, so it gets

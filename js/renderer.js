@@ -34,7 +34,7 @@ function mainRender() {
       default: console.log(e);
     }
   }
-  bgRender('http://readcomiconline.to', 'js/preload/tops.preload.js', {'ipc-message': ipcMessage, 'console-message': e => console.log(e.message)})
+  bgRender('http://readcomiconline.to', 'js/preload/tops.preload.js', {'ipc-message': ipcMessage})
 }
 
 window.onload = function() {
