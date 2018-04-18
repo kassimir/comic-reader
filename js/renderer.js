@@ -23,7 +23,6 @@ const frontPage = {
 function mainRender() {
   function ipcMessage(e) {
     switch(e.channel) {
-      case 'msg': console.log(e.args[0]); break
       case 'tab-newest': frontPage.newest[e.args[0].title] = new Tile(e.args[0].img, e.args[0].link); break
       case 'tab-top-day': frontPage.topday[e.args[0].title] = new Tile(e.args[0].img, e.args[0].link); break
       case 'tab-top-week': frontPage.topweek[e.args[0].title] = new Tile(e.args[0].img, e.args[0].link); break
@@ -48,25 +47,53 @@ function bgRender(src, preload, listeners) {
 
 function buildTiles() {
   hidden.removeChild(q('webview'))
-  const carousel = () => create('div', {class: 'carousel-outer'})
 
   for (let section in frontPage) {
-    function navigation(e) {
-      console.log(e.target.dataset.link)
+    function loadSearch(e) {
+      navigation('description', {link: e.target.dataset.link, section: e.target.dataset.section})
     }
-    const c = carousel()
-    c.id = section
-    const div = create('div', {class: 'carousel-inner', style: {width: Object.keys(frontPage[section]).length * 20 + '%'}}, {'click': navigation})
-    reader.appendChild(c)
+    const heading = () => {
+      switch (section) {
+        case 'newest': return 'MOST RECENTLY ADDED'
+        case 'topday': return 'TOP TODAY'
+        case 'topweek': return 'TOP WEEK'
+        case 'topmonth': return 'TOP MONTH'
+        case 'mostpopular': return 'TOP OF ALL TIME'
+        case 'latest': return 'MOST RECENTLY UPDATED'
+      }
+    }
+    const sectionHeading = create('p', {textContent: heading(), class: 'section-title'})
+    const description = create('div', {class: 'section-desc', id: `${section}-desc`})
+    const carousel = create('div', {class: 'carousel-outer'})
+
+    carousel.id = section
+    const div = create('div', {class: 'carousel-inner', style: {width: Object.keys(frontPage[section]).length * 20 + '%'}}, {'click': loadSearch})
+    reader.appendChild(sectionHeading)
+    reader.appendChild(carousel)
+    reader.appendChild(description)
 
     for (let item in frontPage[section]) {
       const container = create('div', {style: {display: 'flex', 'flex-direction': 'column'}})
-      const img = create('img', {'data-link': frontPage[section][item].link, class: 'link', src: frontPage[section][item].img, style: {width: '20vw', margin: '0 2.25vw'}})
-      const title = create('span', {'data-link': frontPage[section][item].link, class: 'link', innerText: item, style: {color: 'white', margin: '7px'}})
+      const img = create('img', {'data-link': frontPage[section][item].link, 'data-section': section, class: 'link', src: frontPage[section][item].img, style: {width: '20vw', margin: '0 2.25vw'}})
+      const title = create('span', {'data-link': frontPage[section][item].link, 'data-section': section, class: 'link', innerText: item, style: {color: 'white', margin: '7px'}})
       container.appendChild(img)
       container.appendChild(title)
       div.appendChild(container)
-      c.appendChild(div)
+      carousel.appendChild(div)
     }
+  }
+}
+
+// This is the function to "navigate" between pages
+// in the render div
+function navigation(page, e) {
+  if (page === 'description') {
+    const descId = `${e.section}-desc`
+    function ipMessage(e) {
+      console.log(descId)
+      const desc = qi(descId)
+      desc.innerHTML = e.args[0]
+    }
+    bgRender(e.link, './js/preload/issues.preload.js', {'ipc-message': ipMessage})
   }
 }

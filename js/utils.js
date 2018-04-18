@@ -63,10 +63,27 @@ const send = (msg, channel = 'default', type = 'h') => {
   else ipcMain.send(channel, msg)
 }
 
+
+// This gets rid of the Issue from the text
+// A lot of times the text is something like
+// Batman Issue #51. This removes the issue
+// and grabs the title of the comic itself
+const removeIssue = (txt, ind) => {
+  if (!ind) ind = 0
+  // TODO: There are some comics that just have the title and issue: SEE DEADPOOL (1997) -1
+  txt = txt.replace(/[\n,\r]/g, ' ')
+  const possibilities = ['Issue', 'Full', 'TPB', 'Special', '_Special', 'Annual', '_Annual']
+  const regex = `${possibilities[ind]}(?!.*${possibilities[ind]})`
+  if (txt.match(regex)) return txt.substr(0, txt.match(regex).index - 1)
+  else if (ind === possibilities.length) return txt
+  else return removeIssue(txt, ind + 1)
+}
+
 module.exports = {
   q: q,
   qi: qi,
   qc: qc,
   send: send,
-  create: create
+  create: create,
+  removeIssue: removeIssue
 }

@@ -1,4 +1,5 @@
-const send = require('../utils.js').send
+const send = require('../utils').send
+const removeIssue = require('../utils').removeIssue
 
 window.onload = function() {
   // Keeps all the data scraping asynchronous and allows
@@ -12,6 +13,7 @@ window.onload = function() {
     Promise.resolve(getLatest())
   ]).then(() => send('done', 'end'))
 }
+
 // Most the sections have the same layout with different id's
 function getData(id) {
   const tops = document.getElementById(id)
@@ -30,6 +32,7 @@ function getData(id) {
     if (Object.keys(res).length) send(res, id)
   })
 }
+
 // Latest Updated is not one of those sections, so it gets
 // its own function
 function getLatest() {
@@ -44,21 +47,6 @@ function getLatest() {
   })
 }
 
-function removeIssue(txt, ind) {
-  if (!ind) ind = 0
-  // TODO: There are some comics that just have the title and issue: SEE DEADPOOL (1997) -1
-  txt = txt.replace(/[\n,\r]/g, ' ')
-  const possibilities = ['Issue', 'Full', 'TPB', 'Special', '_Special', 'Annual', '_Annual']
-  const regex = `${possibilities[ind]}(?!.*${possibilities[ind]})`
-  if (txt.match(regex)) return txt.substr(0, txt.match(regex).index - 1)
-  else if (ind === possibilities.length) return txt
-  else return removeIssue(txt, ind + 1)
-}
-
-function checkHref(lnk) {
-  // send(lnk, 'msg')
-  if (!lnk.includes('http://readcomiconline.to')) {
-    send(lnk, 'msg')
-    return `http://readcomiconline.to/${link}`
-  }
-}
+// Quick check to insure the links
+// aren't absolute paths
+const checkHref = lnk => lnk.includes('http://readcomiconline.to') ? lnk : `http://readcomiconline.to/${link}`

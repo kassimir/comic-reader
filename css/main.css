@@ -17,6 +17,7 @@
     bottom: 0;
     background-color: black;
     overflow-y: auto;
+    color: white;
 }
 
 .link:hover {
@@ -28,7 +29,7 @@
     overflow-x: scroll;
     width: 100%;
     height: auto;
-    margin: 20px 0;
+    color: white;
 }
 
 .carousel-inner {
@@ -37,6 +38,16 @@
     margin: 20px;
     color: white;
     text-align: center;
+}
+
+.section-title {
+    font-size: 2vh;
+    font-weight: bold;
+    margin: 15px 0 0 2vw;
+}
+
+.section-desc {
+    width: 100%;
 }
 
 /*SCROLL BAR*/
