@@ -100,29 +100,58 @@ function navigation(page, e) {
       const desc = qi(descId)
       desc.innerHTML = ''
       const args = e.args[0]
-      // TODO: remove this
+      // TODO: remove console.log
       console.log(args)
       // I contemplated just writing everything with .innerHTML, simply because
       // there are so many elements being made, but after a lot of research, it
       // is supposed to be faster this way, so I chose it. I may update these to
       // not have inline styles. But it's hard not to utilize the amazing functionality
       // of my create function. :P
+
+      // titleHeader is the title header. It contains the title of the comic,
+      // the "Go to Comic" and "Add to Reading List", and the close button
       const titleHeader = create('div', {class: 'desc-title'})
       const title = create('p', {textContent: args.title})
-      const optionsContainer = create('div', {'style': {'display': 'flex', 'flex-direction': 'row'}, class: 'section-desc_options'})
-      const goToComic = create('span', {class: 'link', 'textContent': '> Go To Comic'})
-      const addToReadingList = create('span', {class: 'link', 'textContent': '+ Add To Reading List'})
-      const closeContainer = create('div', {style: {'text-align': 'right', 'width': '268px'}})
-      const closeDesc = create('span', {class: 'link', 'textContent': 'x', style: {'margin-right': '10px'}})
+      const optionsContainer = create('div', {'style': {display: 'flex', flexDirection: 'row'}, class: 'section-desc_options'})
+      const goToComic = create('span', {class: 'link', textContent: '> Go To Comic'})
+      const addToReadingList = create('span', {class: 'link', textContent: '+ Add To Reading List'})
+      const closeDescription = create('div', {style: {textAlign: 'right', width: '268px'}}, {'click': () => desc.innerHTML = ''})
+      const closeDesc = create('span', {class: 'link', textContent: 'x', style: {marginRight: '10px'}})
 
       optionsContainer.appendChild(goToComic)
       optionsContainer.appendChild(addToReadingList)
-      closeContainer.appendChild(closeDesc)
+      closeDescription.appendChild(closeDesc)
       titleHeader.appendChild(optionsContainer)
       titleHeader.appendChild(title)
-      titleHeader.appendChild(closeContainer)
-      desc.appendChild(titleHeader)
+      titleHeader.appendChild(closeDescription)
 
+      // Description
+      const descContainer = create('div', {class: 'desc-info'})
+      const info = create('div', {style: {width: '30%', display: 'flex', flexDirection: 'column'}})
+      // This might be considered sloppy code, but I like brevity. Sue me.
+      const genre = create('p', {textContent: `${args.genres.length > 1 ? 'Genres' : 'Genre'}: ${args.genres.join(', ')}`, fontWeight: 'bold'})
+      const writer = create('p', {textContent: `${args.writer.length > 1 ? 'Writers' : 'Writer'}: ${args.writer.join(', ')}`, fontWeight: 'bold'})
+      const artist = create('p', {textContent: `${args.artist.length > 1 ? 'Artists' : 'Artist'}: ${args.artist.join(', ')}`, fontWeight: 'bold'})
+      const publisher = create('p', {textContent: `${args.publisher.length > 1 ? 'Publishers' : 'Publisher'}: ${args.publisher.join(', ')}`, fontWeight: 'bold'})
+      const publicationdate = create('p', {textContent: `Publication Date: ${args.publicationdate}`})
+
+      info.appendChild(genre)
+      info.appendChild(writer)
+      info.appendChild(artist)
+      info.appendChild(publisher)
+      info.appendChild(publicationdate)
+      descContainer.appendChild(info)
+
+      const summary = create('div', {style: {width: '70%', display: 'flex', flexDirection: 'column'}})
+      const summaryTitle = create('p', {textContent: 'Summary:'})
+      const summarySummary = create('p', {textContent: args.summary})
+
+      summary.appendChild(summaryTitle)
+      summary.appendChild(summarySummary)
+      descContainer.appendChild(summary)
+
+      desc.appendChild(titleHeader)
+      desc.appendChild(descContainer)
     }
     bgRender(e.link, './js/preload/issues.preload.js', {'ipc-message': ipMessage})
   }

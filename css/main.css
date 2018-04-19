@@ -70,6 +70,16 @@
     font-weight: bold;
 }
 
+.desc-info {
+    padding: 12px;
+    display: flex;
+    flex-direction: row;
+    border-bottom: #5E051D 2px solid;
+}
+
+.desc-info p {
+    margin: 3px;
+}
 /*SCROLL BAR*/
 
 ::-webkit-scrollbar {
