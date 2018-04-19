@@ -48,6 +48,26 @@
 
 .section-desc {
     width: 100%;
+    margin-top: 10px;
+}
+
+.section-desc_options span {
+    margin-left: 10px;
+}
+
+.desc-title {
+    background: linear-gradient(#710824, #6C0722, #660620, #63061F, #5E051D);
+    text-align: center;
+    color: white;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    padding: 5px;
+}
+
+.desc-title p {
+    margin: 0;
+    font-weight: bold;
 }
 
 /*SCROLL BAR*/

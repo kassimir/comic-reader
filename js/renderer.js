@@ -46,7 +46,8 @@ function bgRender(src, preload, listeners) {
 }
 
 function buildTiles() {
-  hidden.removeChild(q('webview'))
+  // Destroy the hidden webview
+  clearHidden()
 
   for (let section in frontPage) {
     function loadSearch(e) {
@@ -67,6 +68,8 @@ function buildTiles() {
     const carousel = create('div', {class: 'carousel-outer'})
 
     carousel.id = section
+    // TODO: Make it so that the image has a mouseover overlay of a > and clicking
+    // TODO: it will go directly to the comic issues instead of the description
     const div = create('div', {class: 'carousel-inner', style: {width: Object.keys(frontPage[section]).length * 20 + '%'}}, {'click': loadSearch})
     reader.appendChild(sectionHeading)
     reader.appendChild(carousel)
@@ -87,13 +90,44 @@ function buildTiles() {
 // This is the function to "navigate" between pages
 // in the render div
 function navigation(page, e) {
+  // Shows the descriptiong of the selected comic
   if (page === 'description') {
     const descId = `${e.section}-desc`
     function ipMessage(e) {
-      console.log(descId)
+      // destroy the hidden webview
+      clearHidden()
+
       const desc = qi(descId)
-      desc.innerHTML = e.args[0]
+      desc.innerHTML = ''
+      const args = e.args[0]
+      // TODO: remove this
+      console.log(args)
+      // I contemplated just writing everything with .innerHTML, simply because
+      // there are so many elements being made, but after a lot of research, it
+      // is supposed to be faster this way, so I chose it. I may update these to
+      // not have inline styles. But it's hard not to utilize the amazing functionality
+      // of my create function. :P
+      const titleHeader = create('div', {class: 'desc-title'})
+      const title = create('p', {textContent: args.title})
+      const optionsContainer = create('div', {'style': {'display': 'flex', 'flex-direction': 'row'}, class: 'section-desc_options'})
+      const goToComic = create('span', {class: 'link', 'textContent': '> Go To Comic'})
+      const addToReadingList = create('span', {class: 'link', 'textContent': '+ Add To Reading List'})
+      const closeContainer = create('div', {style: {'text-align': 'right', 'width': '268px'}})
+      const closeDesc = create('span', {class: 'link', 'textContent': 'x', style: {'margin-right': '10px'}})
+
+      optionsContainer.appendChild(goToComic)
+      optionsContainer.appendChild(addToReadingList)
+      closeContainer.appendChild(closeDesc)
+      titleHeader.appendChild(optionsContainer)
+      titleHeader.appendChild(title)
+      titleHeader.appendChild(closeContainer)
+      desc.appendChild(titleHeader)
+
     }
     bgRender(e.link, './js/preload/issues.preload.js', {'ipc-message': ipMessage})
   }
 }
+
+// I kept forgetting to do this, so I just made a function for it
+// that is easy to remember after every time I create a hidden webview
+function clearHidden() {hidden.removeChild(q('webview'))}
