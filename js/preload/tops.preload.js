@@ -1,7 +1,9 @@
 const send = require('../utils').send
-const removeIssue = require('../utils').removeIssue
+const removeIssue = require('../utils').getOrRemoveIssue
 
-window.onload = function() {
+window.onload = onload
+
+function onload() {
   // Keeps all the data scraping asynchronous and allows
   // to know when it's completed without using counters
   Promise.all([
@@ -41,7 +43,7 @@ function getLatest() {
     Array.from(outer.children).forEach( inner => {
       const link = inner.href
       const img = inner.children[0].src || inner.children[0].getAttribute('srctemp')
-      const title = removeIssue(inner.innerText)
+      const title = removeIssue(inner.innerText, 'name')
       send({link: link, img: img, title: title.trim()}, 'latest')
     })
   })

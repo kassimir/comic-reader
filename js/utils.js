@@ -27,12 +27,15 @@ const create = (ele, attrs, listeners) => {
   if (attrs) {
     for (let key in attrs) {
       if (attrs.hasOwnProperty(key)) {
-        if (typeof attrs[key] === 'object') {
+        if (typeof attrs[key] === 'object' && !Array.isArray(attrs[key])) {
           for (let k in attrs[key]) {
             e[key][k] = attrs[key][k]
           }
         } else {
-          if (key === 'class') e.classList.add(attrs[key])
+          if (key === 'class') {
+            if (Array.isArray(attrs[key])) attrs[key].forEach( c => e.classList.add(c))
+            else e.classList.add(attrs[key])
+          }
           else if (key.includes('data')) e.setAttribute(key, attrs[key])
           else e[key] = attrs[key]
         }
@@ -68,16 +71,62 @@ const send = (msg, channel = 'default', type = 'h') => {
 // A lot of times the text is something like
 // Batman Issue #51. This removes the issue
 // and grabs the title of the comic itself
-const removeIssue = (txt, ind) => {
-  if (!ind) ind = 0
-  // TODO: There are some comics that just have the title and issue: SEE DEADPOOL (1997) -1
-  txt = txt.replace(/[\n,\r]/g, ' ')
-  const possibilities = ['Issue', 'Full', 'TPB', 'Special', '_Special', 'Annual', '_Annual']
-  const regex = `${possibilities[ind]}(?!.*${possibilities[ind]})`
-  if (txt.match(regex)) return txt.substr(0, txt.match(regex).index - 1)
-  else if (ind === possibilities.length) return txt
-  else return removeIssue(txt, ind + 1)
+function getOrRemoveIssue(txt, type) {
+  const split = txt.split(' ')
+  if (split.length < 2) return txt
+
+  const last = split[split.length - 1]
+  const secondLast = split[split.length - 2]
+  // I haven't seen it, but if there is something titled Deadpool TPB Vol 2. This
+  // will return 2 for the number and Vol 2 for the issue and Deadpool TPB for the
+  // title, so something to watch out for, but until I find it, I'm not changing it. :)
+
+  if (type === 'number') return last
+  else if (type === 'issue') {
+    // If the issue is a word (Full, TPB, etc) it will not parseInt
+    // Same as if it has # in it
+    if (!parseInt(last)) {
+      // check if it is #[issue]
+      if (last[0] === '#') return secondLast + ' ' + last
+      // if it isn't, then it's a word of some kind (Full, TPB, etc)
+      else return last
+    } else {
+      // It's just a number
+      return last
+    }
+  } else if (type === 'name') {
+    // If it has #[issue], it's probably preceeded by "Issue"
+    // I've also seen Issue [issue] without a # sign, so same scenario, really
+    // Note that if something is titled Title TPB 1, it will return Title TPB
+    // but I've never seen that, so . . . something to watch out for
+    if ( (last[0] === '#' && secondLast === 'Issue') || (parseInt(last) && secondLast === 'Issue') ) return split.pop() && split.pop() && split.join(' ')
+    // Just in case it isn't preceeded "Issue" however . . .
+    else if ( (last[0] === '#' && secondLast !== 'Issue')
+      || (parseInt(last) && secondLast !== 'Issue')
+      // Lastly, if there's an issue number but no # and no "Issue"
+      || (parseInt(last) && secondLast !== 'Issue')
+      // It's a word of some kind, so just remove it
+      || (!parseInt(last)) )
+        return split.pop() && split.join(' ')
+  }
 }
+
+function sortIssues(arr) {
+  // TODO: write a function that sorts the issues in a not stupid way
+  // if (arr.length < 2) return arr
+  // // This code will separate the issue types:
+  // // const possibilities = ['Issue', 'Full', 'TPB', 'Special', '_Special', 'Annual', '_Annual']
+  // let ish
+  // arr.forEach( (i, ind) => {
+  //   const issue = i.split(' ')
+  //   if (ind === 0) ish = getOrRemoveIssue(i)
+  // })
+  //
+  // const issueNumArray = arr.map( i => getOrRemoveIssue(i, 'number'))
+  //
+  // console.log(issueNumArray)
+}
+
 
 module.exports = {
   q: q,
@@ -85,5 +134,6 @@ module.exports = {
   qc: qc,
   send: send,
   create: create,
-  removeIssue: removeIssue
+  getOrRemoveIssue: getOrRemoveIssue,
+  sortIssues: sortIssues
 }

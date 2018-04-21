@@ -3,6 +3,7 @@ const utils = require('./js/utils.js')
 const qi = utils.qi
 const q = utils.q
 const create = utils.create
+const sortIssues = utils.sortIssues
 
 // Hidden div for rendering pages in the background
 const hidden = qi('hidden')
@@ -17,6 +18,22 @@ const frontPage = {
   topmonth: {},
   mostpopular: {}
 }
+
+let descNode, issueNode
+
+qi('debug').addEventListener('click', () => {
+  hidden.style.visibility = 'visible'
+  q('html').style.height = '100%'
+  q('body').style.height = '100%'
+  q('webview').style.height = '100%'
+  hidden.style.height = '100%'
+  qi('nav').style.display = 'none'
+  reader.style.display = 'none'
+})
+
+qi('opendev').addEventListener('click', () => {
+  q('webview').openDevTools()
+})
 
 // STEP ONE:
 // Navigate to the site, then steal its front page
@@ -33,16 +50,11 @@ function mainRender() {
       default: console.log(e);
     }
   }
-  bgRender('http://readcomiconline.to', 'js/preload/tops.preload.js', {'ipc-message': ipcMessage})
+  bgRender('http://readcomiconline.to', 'js/preload/tops.preload.js', {'ipc-message': ipcMessage, 'console-message': e=>console.log(e.message)})
 }
 
 window.onload = function() {
   mainRender()
-}
-
-function bgRender(src, preload, listeners) {
-  const backgroundWebview = create('webview', {src: src, preload: preload}, listeners)
-  hidden.appendChild(backgroundWebview)
 }
 
 function buildTiles() {
@@ -90,18 +102,22 @@ function buildTiles() {
 // This is the function to "navigate" between pages
 // in the render div
 function navigation(page, e) {
+  //TODO: This function is pretty huge. Make it smaller.
+
   // Shows the descriptiong of the selected comic
   if (page === 'description') {
     const descId = `${e.section}-desc`
-    function ipMessage(e) {
-      // destroy the hidden webview
+    const comicLink = e.link;
+    let desc
+    let view = 'desc'
+    const issueFragment = document.createDocumentFragment()
+    const descFragment = document.createDocumentFragment()
+
+    function ipcMessage(e) {
       clearHidden()
 
-      const desc = qi(descId)
-      desc.innerHTML = ''
-      const args = e.args[0]
-      // TODO: remove console.log
-      console.log(args)
+      desc = qi(descId)
+      const descArgs = e.args[0].desc
       // I contemplated just writing everything with .innerHTML, simply because
       // there are so many elements being made, but after a lot of research, it
       // is supposed to be faster this way, so I chose it. I may update these to
@@ -111,15 +127,19 @@ function navigation(page, e) {
       // titleHeader is the title header. It contains the title of the comic,
       // the "Go to Comic" and "Add to Reading List", and the close button
       const titleHeader = create('div', {class: 'desc-title'})
-      const title = create('p', {textContent: args.title})
-      const optionsContainer = create('div', {'style': {display: 'flex', flexDirection: 'row'}, class: 'section-desc_options'})
-      const goToComic = create('span', {class: 'link', textContent: '> Go To Comic'})
-      const addToReadingList = create('span', {class: 'link', textContent: '+ Add To Reading List'})
-      const closeDescription = create('div', {style: {textAlign: 'right', width: '268px'}}, {'click': () => desc.innerHTML = ''})
-      const closeDesc = create('span', {class: 'link', textContent: 'x', style: {marginRight: '10px'}})
+      const title = create('p', {textContent: descArgs.title, style: {width: '34%'}})
+      const optionsContainer = create('div', {'style': {display: 'flex', flexDirection: 'row', width: '33%'}, class: 'section-desc_options'})
+      const descReadIcon = create('span', {class: ['fas', 'fa-list'], id: 'desc-read-icon'})
+      const listIssues = create('span', {id: 'desc-issue-toggle', class: 'link', textContent: 'Show Issues'}, {'click': () => toggleView()})
+      const addIcon = create('span', {class: ['fas', 'fa-plus']})
+      const addToReadingList = create('span', {class: 'link', textContent: 'Add To Reading List'})
+      const closeDescription = create('div', {style: {textAlign: 'right', width: '33%'}}, {'click': () => desc.innerHTML = ''})
+      const closeDesc = create('span', {class: 'link', textContent: 'x', style: {marginRight: '20px'}})
 
-      optionsContainer.appendChild(goToComic)
+      optionsContainer.appendChild(addIcon)
       optionsContainer.appendChild(addToReadingList)
+      optionsContainer.appendChild(descReadIcon)
+      optionsContainer.appendChild(listIssues)
       closeDescription.appendChild(closeDesc)
       titleHeader.appendChild(optionsContainer)
       titleHeader.appendChild(title)
@@ -127,36 +147,90 @@ function navigation(page, e) {
 
       // Description
       const descContainer = create('div', {class: 'desc-info'})
-      const info = create('div', {style: {width: '30%', display: 'flex', flexDirection: 'column'}})
-      // This might be considered sloppy code, but I like brevity. Sue me.
-      const genre = create('p', {textContent: `${args.genres.length > 1 ? 'Genres' : 'Genre'}: ${args.genres.join(', ')}`, fontWeight: 'bold'})
-      const writer = create('p', {textContent: `${args.writer.length > 1 ? 'Writers' : 'Writer'}: ${args.writer.join(', ')}`, fontWeight: 'bold'})
-      const artist = create('p', {textContent: `${args.artist.length > 1 ? 'Artists' : 'Artist'}: ${args.artist.join(', ')}`, fontWeight: 'bold'})
-      const publisher = create('p', {textContent: `${args.publisher.length > 1 ? 'Publishers' : 'Publisher'}: ${args.publisher.join(', ')}`, fontWeight: 'bold'})
-      const publicationdate = create('p', {textContent: `Publication Date: ${args.publicationdate}`})
+      const info = create('div', {style: {width: '35%', display: 'flex', flexDirection: 'column'}})
+      const genre = create('p', {textContent: `${descArgs.genres.length > 1 ? 'Genres' : 'Genre'}: ${descArgs.genres.join(', ')}`, fontWeight: 'bold'})
+      const writer = create('p', {textContent: `${descArgs.writer.length > 1 ? 'Writers' : 'Writer'}: ${descArgs.writer.join(', ')}`, fontWeight: 'bold'})
+      const artist = create('p', {textContent: `${descArgs.artist.length > 1 ? 'Artists' : 'Artist'}: ${descArgs.artist.join(', ')}`, fontWeight: 'bold'})
+      const publisher = create('p', {textContent: `${descArgs.publisher.length > 1 ? 'Publishers' : 'Publisher'}: ${descArgs.publisher.join(', ')}`, fontWeight: 'bold'})
+      const publicationdate = create('p', {textContent: `Publication Date: ${descArgs.publicationdate}`})
 
       info.appendChild(genre)
       info.appendChild(writer)
       info.appendChild(artist)
       info.appendChild(publisher)
       info.appendChild(publicationdate)
-      descContainer.appendChild(info)
 
-      const summary = create('div', {style: {width: '70%', display: 'flex', flexDirection: 'column'}})
+      descContainer.appendChild(info)
+      descFragment.appendChild(descContainer)
+
+      const summary = create('div', {style: {width: '60%', display: 'flex', flexDirection: 'column'}})
       const summaryTitle = create('p', {textContent: 'Summary:'})
-      const summarySummary = create('p', {textContent: args.summary})
+      const summarySummary = create('p', {textContent: descArgs.summary})
 
       summary.appendChild(summaryTitle)
       summary.appendChild(summarySummary)
       descContainer.appendChild(summary)
 
+      descNode = descFragment.cloneNode(true)
+
+      if (desc.children.length) desc.innerHTML = ''
+
       desc.appendChild(titleHeader)
-      desc.appendChild(descContainer)
+      desc.appendChild(descFragment)
+
+      // Build issues
+      const ishArgs = e.args[0].issues
+      const issueContainer = create('div', {class: 'issue-container'})
+
+      sortIssues(Object.keys(ishArgs))
+
+      for (let issue in ishArgs) {
+        const a = create('span', {textContent: issue, 'data-link': ishArgs[issue], class: 'link'}, {'click': e=>console.log(e.target.dataset.link)})
+        issueContainer.appendChild(a)
+      }
+      issueFragment.appendChild(issueContainer)
+      issueNode = issueFragment.cloneNode(true)
     }
-    bgRender(e.link, './js/preload/issues.preload.js', {'ipc-message': ipMessage})
+
+    function toggleView() {
+      if (view === 'desc') {
+        qi('desc-read-icon').classList.remove('fa-list')
+        qi('desc-read-icon').classList.add('fa-book')
+        qi('desc-issue-toggle').textContent = 'Show Description'
+        let temp = issueNode.cloneNode(true)
+        desc.removeChild(desc.querySelector('.desc-info'))
+        desc.appendChild(issueNode)
+        issueNode = temp.cloneNode(true)
+        view = 'issue'
+      } else {
+        qi('desc-read-icon').classList.remove('fa-book')
+        qi('desc-read-icon').classList.add('fa-list')
+        qi('desc-issue-toggle').textContent = 'Show Issues'
+        let temp = descNode.cloneNode(true)
+        desc.removeChild(desc.querySelector('.issue-container'))
+        desc.appendChild(descNode)
+        descNode = temp.cloneNode(true)
+        view = 'desc'
+      }
+    }
+
+    bgRender(comicLink, './js/preload/description.preload.js', {'ipc-message': ipcMessage})
   }
+}
+
+
+function bgRender(src, preload, listeners) {
+  const backgroundWebview = create('webview', {src: src, preload: preload}, listeners)
+  hidden.appendChild(backgroundWebview)
+  const mute = setInterval(() => {
+    const wv = q('webview')
+    if (wv.getWebContents()) {
+      wv.setAudioMuted(true)
+      clearInterval(mute)
+    }
+  }, 500)
 }
 
 // I kept forgetting to do this, so I just made a function for it
 // that is easy to remember after every time I create a hidden webview
-function clearHidden() {hidden.removeChild(q('webview'))}
+function clearHidden() {if (hidden.childNodes.length) {hidden.removeChild(q('webview'))}}

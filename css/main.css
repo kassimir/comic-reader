@@ -51,8 +51,12 @@
     margin-top: 10px;
 }
 
-.section-desc_options span {
+.section-desc_options span:nth-child(odd) {
     margin-left: 10px;
+}
+
+.section-desc_options span:nth-child(even) {
+    margin-left: 3px;
 }
 
 .desc-title {
@@ -61,8 +65,8 @@
     color: white;
     display: flex;
     flex-direction: row;
-    justify-content: space-between;
     padding: 5px;
+    width: 100%;
 }
 
 .desc-title p {
@@ -74,11 +78,23 @@
     padding: 12px;
     display: flex;
     flex-direction: row;
-    border-bottom: #5E051D 2px solid;
+    justify-content: space-around;
+    border: #5E051D 2px solid;
 }
 
 .desc-info p {
     margin: 3px;
+}
+
+.issue-container {
+    padding: 12px;
+    column-count: 3;
+    color: white;
+    border: #5E051D 2px solid;
+}
+
+.issue-container span {
+    display: block;
 }
 /*SCROLL BAR*/
 
