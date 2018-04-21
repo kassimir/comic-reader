@@ -75,6 +75,10 @@ function getOrRemoveIssue(txt, type) {
   const split = txt.split(' ')
   if (split.length < 2) return txt
 
+  function nameCheck(name) {
+    return ['Issue', 'Full', 'TPB', 'Special', '_Special', 'Annual', '_Annual'].filter( p => name.includes(p))
+  }
+
   const last = split[split.length - 1]
   const secondLast = split[split.length - 2]
   // I haven't seen it, but if there is something titled Deadpool TPB Vol 2. This
@@ -87,11 +91,11 @@ function getOrRemoveIssue(txt, type) {
     // Same as if it has # in it
     if (!parseInt(last)) {
       // check if it is #[issue]
-      if (last[0] === '#') return secondLast + ' ' + last
+      if (last[0] === '#' || nameCheck(secondLast)) return secondLast + ' ' + last
       // if it isn't, then it's a word of some kind (Full, TPB, etc)
-      else return last
+      return last
     } else {
-      // It's just a number
+      if (nameCheck(secondLast)) return secondLast + ' ' + last
       return last
     }
   } else if (type === 'name') {
@@ -99,13 +103,11 @@ function getOrRemoveIssue(txt, type) {
     // I've also seen Issue [issue] without a # sign, so same scenario, really
     // Note that if something is titled Title TPB 1, it will return Title TPB
     // but I've never seen that, so . . . something to watch out for
-    if ( (last[0] === '#' && secondLast === 'Issue') || (parseInt(last) && secondLast === 'Issue') ) return split.pop() && split.pop() && split.join(' ')
+    if ( (last[0] === '#' && nameCheck(secondLast)) || (parseInt(last) && nameCheck(secondLast)) ) return split.pop() && split.pop() && split.join(' ')
     // Just in case it isn't preceeded "Issue" however . . .
-    else if ( (last[0] === '#' && secondLast !== 'Issue')
-      || (parseInt(last) && secondLast !== 'Issue')
+    else if ( (last[0] === '#' && !nameCheck(secondLast))
+      || (parseInt(last) && !nameCheck(secondLast))
       // Lastly, if there's an issue number but no # and no "Issue"
-      || (parseInt(last) && secondLast !== 'Issue')
-      // It's a word of some kind, so just remove it
       || (!parseInt(last)) )
         return split.pop() && split.join(' ')
   }
@@ -113,19 +115,46 @@ function getOrRemoveIssue(txt, type) {
 
 function sortIssues(arr) {
   // TODO: write a function that sorts the issues in a not stupid way
-  // if (arr.length < 2) return arr
-  // // This code will separate the issue types:
-  // // const possibilities = ['Issue', 'Full', 'TPB', 'Special', '_Special', 'Annual', '_Annual']
-  // let ish
-  // arr.forEach( (i, ind) => {
-  //   const issue = i.split(' ')
-  //   if (ind === 0) ish = getOrRemoveIssue(i)
-  // })
-  //
-  // const issueNumArray = arr.map( i => getOrRemoveIssue(i, 'number'))
-  //
-  // console.log(issueNumArray)
+  if (arr.length < 2) return arr
+
+  const sortedArr = []
+  // This code will find out what types of issues a comic has: Issues, TPB, Annual, etc
+  // That way you don't get Issue #1, Annual 1, Issue #2. It will be Issue #1, Issue #2, Annual 1
+  // Note that "Issue"s are first-class citizens here.
+  const issueTypes = new Set(arr.map( i => getOrRemoveIssue(i, 'issue'))
+    .map( i => {
+      const ish = i.split(' ')
+      return ish[0]
+    }))
+
+  function mySort(a, type) {
+    return a.filter( i => i.includes(type)).sort( (a,b) => {
+      let first = getOrRemoveIssue(a, 'number')
+      let second = getOrRemoveIssue(b, 'number')
+      if (first[0] === '#') first = first.substr(1, first.length - 1)
+      if (second[0] === '#') second = second.substr(1, second.length - 1)
+      return first - second
+    })
+  }
+
+  if (issueTypes.has('Issue')) {
+    const issueArr = mySort(arr, 'Issue');
+
+    issueArr.forEach( i => sortedArr.push(i))
+  }
+
+  issueTypes.delete('Issue')
+  if (issueTypes.size) {
+    issueTypes.forEach( type => {
+      const issueArr = mySort(arr, type);
+
+      issueArr.forEach( i => sortedArr.push(i))
+    })
+  }
+
+  return sortedArr
 }
+
 
 
 module.exports = {

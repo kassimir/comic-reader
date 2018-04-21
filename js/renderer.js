@@ -50,7 +50,7 @@ function mainRender() {
       default: console.log(e);
     }
   }
-  bgRender('http://readcomiconline.to', 'js/preload/tops.preload.js', {'ipc-message': ipcMessage, 'console-message': e=>console.log(e.message)})
+  bgRender('http://readcomiconline.to', 'js/preload/tops.preload.js', {'ipc-message': ipcMessage})
 }
 
 window.onload = function() {
@@ -182,12 +182,13 @@ function navigation(page, e) {
       const ishArgs = e.args[0].issues
       const issueContainer = create('div', {class: 'issue-container'})
 
-      sortIssues(Object.keys(ishArgs))
+      const sortedIssuesArray = sortIssues(Object.keys(ishArgs))
 
-      for (let issue in ishArgs) {
-        const a = create('span', {textContent: issue, 'data-link': ishArgs[issue], class: 'link'}, {'click': e=>console.log(e.target.dataset.link)})
+      sortedIssuesArray.forEach( i => {
+        const a = create('span', {textContent: i, 'data-link': ishArgs[i], class: 'link'}, {'click': e=>console.log(e.target.dataset.link)})
         issueContainer.appendChild(a)
-      }
+      })
+      
       issueFragment.appendChild(issueContainer)
       issueNode = issueFragment.cloneNode(true)
     }

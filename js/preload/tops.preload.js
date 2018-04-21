@@ -4,6 +4,19 @@ const removeIssue = require('../utils').getOrRemoveIssue
 window.onload = onload
 
 function onload() {
+  // _pnI_1524343172502 -> id of iframe I may need to
+  // get rid of... but I haven't had the chance to check
+  // and see if it's always the same id, so leaving here
+  // for now.
+
+
+  // Check for DOM or try again
+  const dom = document.querySelector('#containerRoot')
+  if (!dom || !dom.innerHTML) {
+    setTimeout(onload, 2000)
+    return
+  }
+
   // Keeps all the data scraping asynchronous and allows
   // to know when it's completed without using counters
   Promise.all([
@@ -22,12 +35,12 @@ function getData(id) {
   Array.from(tops.children).forEach( div => {
     const res = {}
     Array.from(div.children).forEach( inner => {
-      if (inner.href && inner.children && inner.innerText !== 'More...') {
+      if (inner.href && inner.children && inner.textContent !== 'More...') {
         if (inner.children[0].nodeName === 'IMG') {
           res.link = checkHref(inner.href)
           res.img = inner.children[0].src
         } else {
-          res.title = inner.children[0].textContent
+          res.title = inner.children[0].textContent.trim().replace(/[\n\r]/g, '')
         }
       }
     })
@@ -43,8 +56,8 @@ function getLatest() {
     Array.from(outer.children).forEach( inner => {
       const link = inner.href
       const img = inner.children[0].src || inner.children[0].getAttribute('srctemp')
-      const title = removeIssue(inner.innerText, 'name')
-      send({link: link, img: img, title: title.trim()}, 'latest')
+      const title = removeIssue(inner.textContent, 'name').trim().replace(/[\n\r]/g, '')
+      send({link: link, img: img, title: title}, 'latest')
     })
   })
 }

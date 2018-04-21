@@ -62,7 +62,7 @@ function onload() {
     let td, a
     if (issue.children.length)  td = issue.children[0]
     if (td && td.children.length)  a = td.children[0]
-    if (a && a.nodeName === 'A') issueList[a.textContent] = a.href
+    if (a && a.nodeName === 'A') issueList[a.textContent.trim()] = a.href
   })
   send ({desc: data, issues: issueList})
 }
