@@ -1,5 +1,6 @@
 const ipcRender = require('electron').ipcRenderer
 const ipcMain = require('electron').ipcMain
+const recentDB = require('../database/recent.database')
 
 /*
   I don't want to use jQuery, but I also hate writing document.querySelector[All](element)
@@ -155,7 +156,12 @@ function sortIssues(arr) {
   return sortedArr
 }
 
-
+function writeRecent(title, issue, link) {
+  issue = getOrRemoveIssue(issue, 'issue')
+  if (!recentDB[title]) recentDB[title] = {[issue]: link}
+  else recentDB[title][issue] = link
+  send(recentDB, 'update', 'r')
+}
 
 module.exports = {
   q: q,
@@ -164,5 +170,6 @@ module.exports = {
   send: send,
   create: create,
   getOrRemoveIssue: getOrRemoveIssue,
-  sortIssues: sortIssues
+  sortIssues: sortIssues,
+  writeRecent: writeRecent
 }

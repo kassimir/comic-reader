@@ -4,6 +4,7 @@ const qi = utils.qi
 const q = utils.q
 const create = utils.create
 const sortIssues = utils.sortIssues
+const writeRecent = utils.writeRecent
 
 // Hidden div for rendering pages in the background
 const hidden = qi('hidden')
@@ -121,7 +122,7 @@ function navigation(page, e) {
   if (page === 'description') {
     const descId = `${e.section}-desc`
     const comicLink = e.link;
-    let desc
+    let desc, comicTitle
     let view = 'desc'
     const issueFragment = document.createDocumentFragment()
     const descFragment = document.createDocumentFragment()
@@ -135,6 +136,7 @@ function navigation(page, e) {
 
       desc = qi(descId)
       const descArgs = e.args[0].desc
+      comicTitle = descArgs.title
       // I contemplated just writing everything with .innerHTML, simply because
       // there are so many elements being made, but after a lot of research, it
       // is supposed to be faster this way, so I chose it. I may update these to
@@ -218,8 +220,8 @@ function navigation(page, e) {
         let temp = issueNode.cloneNode(true)
         desc.removeChild(desc.querySelector('.desc-info'))
         desc.appendChild(issueNode)
-        if (q('.issue-container span').length) q('.issue-container span').forEach( i => i.addEventListener('click', e => navigation('comic', e.target.dataset.link)))
-        else q('.issue-container span').addEventListener('click', e => navigation('comic', e.target.dataset.link))
+        if (q('.issue-container span').length) q('.issue-container span').forEach( i => i.addEventListener('click', e => navigation('comic', {title: comicTitle, issue: e.target.textContent, link: e.target.dataset.link})))
+        else q('.issue-container span').addEventListener('click', e => navigation('comic', {title: comicTitle, issue: e.target.textContent, link: e.target.dataset.link}))
         issueNode = temp.cloneNode(true)
         view = 'issue'
       } else {
@@ -236,11 +238,11 @@ function navigation(page, e) {
 
     bgRender(comicLink, './js/preload/description.preload.js', {'ipc-message': ipcMessage})
   } else if (page === 'comic') {
-
+writeRecent(e.title, e.issue, e.link)
     function ipcMessage(e) {
       clearHidden()
       reader.innerHTML = ''
-      const div=create('div', {style: {width: '100%', display: 'flex', justifyContent: 'center', flexDirection: 'column'}})
+      const div = create('div', {style: {width: '100%', display: 'flex', justifyContent: 'center', flexDirection: 'column'}})
       reader.appendChild(div)
       e.args[0].forEach( i => {
         const img = create('img', {src: i})
@@ -248,7 +250,7 @@ function navigation(page, e) {
       })
     }
 
-    bgRender(e, './js/preload/comic.preload.js', {'ipc-message': ipcMessage})
+    bgRender(e.link, './js/preload/comic.preload.js', {'ipc-message': ipcMessage})
   }
 }
 
