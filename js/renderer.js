@@ -127,6 +127,10 @@ function navigation(page, e) {
     const descFragment = document.createDocumentFragment()
 
     function ipcMessage(e) {
+      if (e.channel === 'msg') {
+        console.log(e.args[0])
+        return
+      }
       clearHidden()
 
       desc = qi(descId)

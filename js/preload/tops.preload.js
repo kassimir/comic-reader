@@ -44,7 +44,7 @@ function getLatest() {
     Array.from(outer.children).forEach( inner => {
       const link = inner.href
       const img = inner.children[0].src || inner.children[0].getAttribute('srctemp')
-      const title = removeIssue(inner.textContent, 'name').trim().replace(/[\n\r]/g, '')
+      const title = (inner.childNodes[2].textContent).trim().replace(/[\n\r]/g, '')
       send({link: link, img: img, title: title}, 'latest')
     })
   })

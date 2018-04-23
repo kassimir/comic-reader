@@ -76,7 +76,7 @@ function getOrRemoveIssue(txt, type) {
   if (split.length < 2) return txt
 
   function nameCheck(name) {
-    return ['Issue', 'Full', 'TPB', 'Special', '_Special', 'Annual', '_Annual'].filter( p => name.includes(p))
+    return ['Issue', 'Full', 'TPB', 'Special', '_Special', 'Annual', '_Annual', 'Yearbook'].filter( p => name.includes(p))
   }
 
   const last = split[split.length - 1]

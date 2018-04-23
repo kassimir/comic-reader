@@ -34,9 +34,13 @@ function onload() {
     const children = Array.from(item.children)
     let prop = '';
     children.forEach( (child, ind) => {
-      if (child.textContent === 'Status:' || !child.textContent || child.textContent === 'Summary:') return
-      if (ind === 0) prop = child.textContent.replace(/[:, \s]/g, '').toLowerCase()
-      else if (child.nodeName === 'A') data[prop].push(child.textContent)
+      if (child.textContent === 'Status:' || !child.textContent || child.textContent === 'Summary:' || child.textContent === 'Other name:') return
+      if (ind === 0) {
+        const txt = child.textContent.replace(/[:, \s]/g, '').toLowerCase()
+        if (txt !== 'artist' && txt !== 'genres' && txt !== 'publicationdate' && txt !== 'publisher' && txt !== 'writer') return
+        prop = txt
+      }
+      else if (child.nodeName === 'A') if (data[prop]) data[prop].push(child.textContent); else return
       if (prop === 'publicationdate') data['publicationdate'] = child.nextSibling.textContent.trim()
     })
   })
