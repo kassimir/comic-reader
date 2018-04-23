@@ -19,7 +19,21 @@ const frontPage = {
   mostpopular: {}
 }
 
-let descNode, issueNode
+let descNode, issueNode, iframeTO, loaded = false
+
+
+// This is here, because the main page has a bunch of iframes on it that will
+// block my code from running. This script here will force code into the page
+// and destroy all the iframes and allow my code to work.
+function loadCommit() {
+  if (iframeTO) return
+  iframeTO = setInterval(() => {
+    if (!loaded && q('webview')) {
+      q('webview').executeJavaScript(`document.querySelectorAll('iframe').forEach(f => f.parentElement.removeChild(f))`)
+      const modal = document.querySelector('div[id*="close"]')
+      if (modal && modal.innerHTML) modal.click()
+    } else clearInterval(iframeTO)}, 2000)
+}
 
 qi('debug').addEventListener('click', () => {
   hidden.style.visibility = 'visible'
@@ -27,7 +41,6 @@ qi('debug').addEventListener('click', () => {
   q('body').style.height = '100%'
   q('webview').style.height = '100%'
   hidden.style.height = '100%'
-  qi('nav').style.display = 'none'
   reader.style.display = 'none'
 })
 
@@ -40,6 +53,7 @@ qi('opendev').addEventListener('click', () => {
 function mainRender() {
   function ipcMessage(e) {
     switch(e.channel) {
+      case 'msg': console.log(e.args[0]); break
       case 'tab-newest': frontPage.newest[e.args[0].title] = new Tile(e.args[0].img, e.args[0].link); break
       case 'tab-top-day': frontPage.topday[e.args[0].title] = new Tile(e.args[0].img, e.args[0].link); break
       case 'tab-top-week': frontPage.topweek[e.args[0].title] = new Tile(e.args[0].img, e.args[0].link); break
@@ -50,12 +64,11 @@ function mainRender() {
       default: console.log(e);
     }
   }
+
   bgRender('http://readcomiconline.to', 'js/preload/tops.preload.js', {'ipc-message': ipcMessage})
 }
 
-window.onload = function() {
-  mainRender()
-}
+window.onload = mainRender
 
 function buildTiles() {
   // Destroy the hidden webview
@@ -185,10 +198,10 @@ function navigation(page, e) {
       const sortedIssuesArray = sortIssues(Object.keys(ishArgs))
 
       sortedIssuesArray.forEach( i => {
-        const a = create('span', {textContent: i, 'data-link': ishArgs[i], class: 'link'}, {'click': e=>console.log(e.target.dataset.link)})
+        const a = create('span', {textContent: i, 'data-link': ishArgs[i], class: 'link'})
         issueContainer.appendChild(a)
       })
-      
+
       issueFragment.appendChild(issueContainer)
       issueNode = issueFragment.cloneNode(true)
     }
@@ -201,6 +214,8 @@ function navigation(page, e) {
         let temp = issueNode.cloneNode(true)
         desc.removeChild(desc.querySelector('.desc-info'))
         desc.appendChild(issueNode)
+        if (q('.issue-container span').length) q('.issue-container span').forEach( i => i.addEventListener('click', e => navigation('comic', e.target.dataset.link)))
+        else q('.issue-container span').addEventListener('click', e => navigation('comic', e.target.dataset.link))
         issueNode = temp.cloneNode(true)
         view = 'issue'
       } else {
@@ -216,11 +231,26 @@ function navigation(page, e) {
     }
 
     bgRender(comicLink, './js/preload/description.preload.js', {'ipc-message': ipcMessage})
+  } else if (page === 'comic') {
+
+    function ipcMessage(e) {
+      clearHidden()
+      reader.innerHTML = ''
+      const div=create('div', {style: {width: '100%', display: 'flex', justifyContent: 'center', flexDirection: 'column'}})
+      reader.appendChild(div)
+      e.args[0].forEach( i => {
+        const img = create('img', {src: i})
+        div.appendChild(img)
+      })
+    }
+
+    bgRender(e, './js/preload/comic.preload.js', {'ipc-message': ipcMessage})
   }
 }
 
-
 function bgRender(src, preload, listeners) {
+  loaded = false
+  if (!listeners['load-commit']) listeners['load-commit'] = loadCommit
   const backgroundWebview = create('webview', {src: src, preload: preload}, listeners)
   hidden.appendChild(backgroundWebview)
   const mute = setInterval(() => {
@@ -234,4 +264,9 @@ function bgRender(src, preload, listeners) {
 
 // I kept forgetting to do this, so I just made a function for it
 // that is easy to remember after every time I create a hidden webview
-function clearHidden() {if (hidden.childNodes.length) {hidden.removeChild(q('webview'))}}
+function clearHidden() {
+  loaded = true
+  clearInterval(iframeTO)
+  iframeTO = null
+  if (hidden.childNodes.length) {hidden.removeChild(q('webview'))}
+}

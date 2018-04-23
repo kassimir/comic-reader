@@ -4,18 +4,6 @@ const removeIssue = require('../utils').getOrRemoveIssue
 window.onload = onload
 
 function onload() {
-  // _pnI_1524343172502 -> id of iframe I may need to
-  // get rid of... but I haven't had the chance to check
-  // and see if it's always the same id, so leaving here
-  // for now.
-
-
-  // Check for DOM or try again
-  const dom = document.querySelector('#containerRoot')
-  if (!dom || !dom.innerHTML) {
-    setTimeout(onload, 2000)
-    return
-  }
 
   // Keeps all the data scraping asynchronous and allows
   // to know when it's completed without using counters

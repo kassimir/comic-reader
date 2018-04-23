@@ -1,9 +1,10 @@
 const send = require('../utils').send
 
-let int
+window.onload = onload
 
-window.onload = () => {int = setInterval(onload, 2000)}
 
+// TODO: Add some level of asynchronousity to this to allow for
+// TODO: faster load time of the description box.
 function onload() {
   // For some reason, I couldn't use document.querySelectorAll('.listing td')
   // It was ALWAYS null. Which is annoying. So I had to go this route instead.
