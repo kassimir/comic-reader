@@ -57,7 +57,5 @@ app.on('activate', function () {
 })
 
 ipc.on('update', (e, a) => {
-  fs.writeFile('./database/recent.database.json', JSON.stringify(a), () => {
-    e.sender.send('update', 'done')
-  })
+  if (a.type === 'recent') fs.writeFile('./database/recent.database.json', JSON.stringify(a.data))
 })

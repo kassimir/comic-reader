@@ -3,6 +3,7 @@ const utils = require('./js/utils.js')
 const qi = utils.qi
 const q = utils.q
 const create = utils.create
+const getIssue = utils.getOrRemoveIssue
 const sortIssues = utils.sortIssues
 const writeRecent = utils.writeRecent
 
@@ -19,6 +20,15 @@ const frontPage = {
   topmonth: {},
   mostpopular: {}
 }
+
+const currentComic = {
+  title: '',
+  cover: '',
+  link: ''
+}
+
+// This is the database for Most Recently Read
+const recentDB = require('./database/recent.database')
 
 let descNode, issueNode, iframeTO, loaded = false
 
@@ -52,6 +62,7 @@ qi('opendev').addEventListener('click', () => {
 // STEP ONE:
 // Navigate to the site, then steal its front page
 function mainRender() {
+
   function ipcMessage(e) {
     switch(e.channel) {
       case 'msg': console.log(e.args[0]); break
@@ -74,13 +85,30 @@ window.onload = mainRender
 function buildTiles() {
   // Destroy the hidden webview
   clearHidden()
+  // Most Recently Read is built differently
+  if (Object.keys(recentDB).length) {
+    frontPage['recent'] = {}
+    for (let comic in recentDB) {
+      frontPage.recent[comic] = new Tile(recentDB[comic].cover, recentDB[comic].link)
+    }
+  }
 
   for (let section in frontPage) {
     function loadSearch(e) {
+      if (e.target.nodeName === 'IMG') {
+        currentComic.cover = e.target.src
+        currentComic.link = e.target.dataset.link
+        currentComic.title = e.target.parentElement.children[1].textContent
+      } else {
+        currentComic.cover = e.target.parentElement.children[0].src
+        currentComic.link = e.target.dataset.link
+        currentComic.title = e.target.textContent
+      }
       navigation('description', {link: e.target.dataset.link, section: e.target.dataset.section})
     }
     const heading = () => {
       switch (section) {
+        case 'recent': return 'MOST RECENTLY READ'
         case 'newest': return 'MOST RECENTLY ADDED'
         case 'topday': return 'TOP TODAY'
         case 'topweek': return 'TOP WEEK'
@@ -94,12 +122,20 @@ function buildTiles() {
     const carousel = create('div', {class: 'carousel-outer'})
 
     carousel.id = section
-    // TODO: Make it so that the image has a mouseover overlay of a > and clicking
-    // TODO: it will go directly to the comic issues instead of the description
+    // TODO: Make a way to display issues instead of description
     const div = create('div', {class: 'carousel-inner', style: {width: Object.keys(frontPage[section]).length * 20 + '%'}}, {'click': loadSearch})
-    reader.appendChild(sectionHeading)
-    reader.appendChild(carousel)
-    reader.appendChild(description)
+
+    // Make sure Recent is at the top of the page... until Reading List is completed, of course.
+    if (section !== 'recent') {
+      reader.appendChild(sectionHeading)
+      reader.appendChild(carousel)
+      reader.appendChild(description)
+    } else {
+      reader.insertBefore(description, reader.childNodes[0])
+      reader.insertBefore(carousel, reader.childNodes[0])
+      reader.insertBefore(sectionHeading, reader.childNodes[0])
+    }
+
 
     for (let item in frontPage[section]) {
       const container = create('div', {style: {display: 'flex', 'flex-direction': 'column'}})
@@ -204,7 +240,9 @@ function navigation(page, e) {
       const sortedIssuesArray = sortIssues(Object.keys(ishArgs))
 
       sortedIssuesArray.forEach( i => {
-        const a = create('span', {textContent: i, 'data-link': ishArgs[i], class: 'link'})
+        let spanClass = 'link'
+        if (recentDB[comicTitle] && recentDB[comicTitle].issues[getIssue(i, 'issue')]) spanClass = 'link-read'
+        const a = create('span', {textContent: i, 'data-link': ishArgs[i], class: spanClass})
         issueContainer.appendChild(a)
       })
 
@@ -238,7 +276,9 @@ function navigation(page, e) {
 
     bgRender(comicLink, './js/preload/description.preload.js', {'ipc-message': ipcMessage})
   } else if (page === 'comic') {
-writeRecent(e.title, e.issue, e.link)
+    // Save to Recently Read database
+    writeRecent(currentComic, e.issue, e.link)
+
     function ipcMessage(e) {
       clearHidden()
       reader.innerHTML = ''
