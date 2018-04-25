@@ -158,8 +158,12 @@ function sortIssues(arr) {
 function writeRecent(comic, issue, link) {
   const recentDB = require('../database/recent.database')
   issue = getOrRemoveIssue(issue, 'issue')
-  if (!recentDB[comic.title]) recentDB[comic.title] = {link: comic.link, cover: comic.cover, issues: {[issue] : link}}
-  else recentDB[comic.title].issues[issue] = link
+  if (!recentDB[comic.title]) {
+    recentDB[comic.title] = {date: new Date(), link: comic.link, cover: comic.cover, issues: {[issue] : link}}
+  } else {
+    recentDB[comic.title].issues[issue] = link
+    recentDB[comic.title].date = new Date()
+  }
   send({type: 'recent', data: recentDB}, 'update', 'r')
 }
 

@@ -7,6 +7,18 @@
     right: 0;
     height: 55px;
     background: linear-gradient(#710824, #6C0722, #660620, #63061F, #5E051D);
+    display: flex;
+    align-items: center;
+}
+
+/* TODO: remove this*/
+#nav button {
+    margin-left: 20px;
+}
+
+.fas.fa-home {
+    color: black;
+    margin-left: 10px;
 }
 
 #reader {
@@ -20,7 +32,7 @@
     color: white;
 }
 
-.link:hover {
+.link:hover, .link-read:hover {
     text-decoration: underline;
     cursor: pointer;
 }

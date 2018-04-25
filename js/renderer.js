@@ -63,6 +63,12 @@ qi('opendev').addEventListener('click', () => {
 // Navigate to the site, then steal its front page
 function mainRender() {
 
+  if (reader.innerHTML) {
+    reader.innerHTML = ''
+    qi('home').style.cursor = 'default'
+    qi('home').removeEventListener('click', mainRender)
+  }
+
   function ipcMessage(e) {
     switch(e.channel) {
       case 'msg': console.log(e.args[0]); break
@@ -122,7 +128,7 @@ function buildTiles() {
     const carousel = create('div', {class: 'carousel-outer'})
 
     carousel.id = section
-    // TODO: Make a way to display issues instead of description
+    // TODO: Make a way to display issues instead of description - currently defaults to always showing description first
     const div = create('div', {class: 'carousel-inner', style: {width: Object.keys(frontPage[section]).length * 20 + '%'}}, {'click': loadSearch})
 
     // Make sure Recent is at the top of the page... until Reading List is completed, of course.
@@ -136,15 +142,43 @@ function buildTiles() {
       reader.insertBefore(sectionHeading, reader.childNodes[0])
     }
 
-
     for (let item in frontPage[section]) {
       const container = create('div', {style: {display: 'flex', 'flex-direction': 'column'}})
       const img = create('img', {'data-link': frontPage[section][item].link, 'data-section': section, class: 'link', src: frontPage[section][item].img, style: {width: '20vw', margin: '0 2.25vw'}})
       const title = create('span', {'data-link': frontPage[section][item].link, 'data-section': section, class: 'link', innerText: item, style: {color: 'white', margin: '7px'}})
+      if (section === 'recent') container.id = item.replace(/[\s()]/g, '')
       container.appendChild(img)
       container.appendChild(title)
       div.appendChild(container)
-      carousel.appendChild(div)
+
+      if (section !== 'recent' || !carousel.children.length) {
+        carousel.appendChild(div)
+      } else {
+        // I'm not sure if this is the best way to go about this, but it sorts via date
+        // so recent items show up in the order in which they were read (most recent first)
+        // I could probably do a sort like what I do with the issues, but this code works for now
+        const read = carousel.querySelectorAll('div')
+        const thisBookDate = new Date(recentDB[item].date)
+        let prepend
+        let prependDate = new Date(new Date().getDate() - 100)
+        
+        read.forEach( title => {
+          const readTitle = title.querySelector('span').textContent
+          const readDate = new Date(recentDB[readTitle].date)
+          if (!prependDate) prependDate = readDate
+          if (thisBookDate > readDate && readDate > prependDate) {
+            prepend = readTitle
+            prependDate = recentDB[readTitle].date
+          }
+        })
+
+        if (prepend) {
+          const prependDiv = q(`#${prepend.replace(/[\s()]/g, '')}`)
+          div.insertBefore(container, prependDiv)
+        } else {
+          carousel.appendChild(div)
+        }
+      }
     }
   }
 }
@@ -258,8 +292,15 @@ function navigation(page, e) {
         let temp = issueNode.cloneNode(true)
         desc.removeChild(desc.querySelector('.desc-info'))
         desc.appendChild(issueNode)
-        if (q('.issue-container span').length) q('.issue-container span').forEach( i => i.addEventListener('click', e => navigation('comic', {title: comicTitle, issue: e.target.textContent, link: e.target.dataset.link})))
-        else q('.issue-container span').addEventListener('click', e => navigation('comic', {title: comicTitle, issue: e.target.textContent, link: e.target.dataset.link}))
+        if (q('.issue-container span').length) {
+          q('.issue-container span').forEach( i => i.addEventListener('click', e => {
+            navigation('comic', {title: comicTitle, issue: e.target.textContent, link: e.target.dataset.link})
+          }))
+        } else {
+          q('.issue-container span').addEventListener('click', e => {
+            navigation('comic', {title: comicTitle, issue: e.target.textContent, link: e.target.dataset.link})
+          })
+        }
         issueNode = temp.cloneNode(true)
         view = 'issue'
       } else {
@@ -278,6 +319,9 @@ function navigation(page, e) {
   } else if (page === 'comic') {
     // Save to Recently Read database
     writeRecent(currentComic, e.issue, e.link)
+    // Set up Home button
+    qi('home').addEventListener('click', mainRender)
+    qi('home').style.cursor = 'pointer'
 
     function ipcMessage(e) {
       clearHidden()
