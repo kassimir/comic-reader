@@ -13,8 +13,12 @@ function onload() {
   // The section with the information about the comic
   const about = document.querySelector('.barContent')
 
-  // Mmmmm... recursion
-  if (!issues.innerHTML || !about.innerHTML) setTimeout(onload, 2000)
+  // // Mmmmm... recursion
+  // TODO: figure out why this isn't working now...
+  // if (!issues.innerHTML || !about.innerHTML) {
+  //   setTimeout(onload, 2000)
+  //   return
+  // }
 
   const info = about.children[0].querySelectorAll('p')
   const data = {

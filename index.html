@@ -9,9 +9,15 @@
   <body>
     <div id="hidden"></div>
     <div id="nav">
-      <i class="fas fa-home fa-3x" id="home"></i>
+      <i class="fas fa-home fa-2x" id="home"></i>
       <button id="debug">DEBUG</button>
       <button id="opendev">DEV TOOLS</button>
+      <div id="search">
+        <form action="javascript:void(0);" onsubmit="search()">
+          <input type="text" placeholder="Search" name="search-input" id="search-input">
+          <i class="fas fa-search fa-2x" onclick="search()"></i>
+        </form>
+      </div>
     </div>
     <div id="reader"></div>
     <script src="js/renderer.js"></script>

@@ -8,7 +8,47 @@
     height: 55px;
     background: linear-gradient(#710824, #6C0722, #660620, #63061F, #5E051D);
     display: flex;
+    justify-content: space-between;
     align-items: center;
+}
+
+#search {
+    margin-right: 10px;
+    display: flex;
+    flex-direction: row;
+}
+
+#search input {
+    height: 30px;
+    background-color: black;
+    margin-right: 10px;
+    border: none;
+    color: white;
+    padding-left: 5px;
+    outline: none;
+}
+
+#search i {
+    /* Doesn't make sense to me either, but this made it the perfect size */
+    font-size: 171%;
+    cursor: pointer;
+}
+
+#search-results {
+    margin-top: 20px;
+    border-bottom: #5E051D;
+}
+
+.search-table {
+    display: flex;
+    justify-content: space-between;
+    padding: 0 20px;
+    margin: 2px;
+}
+
+.search-table:hover {
+    cursor: pointer;
+    background-color: #710824;
 }
 
 /* TODO: remove this*/

@@ -5,7 +5,10 @@ window.onload = onload
 function onload() {
   const comicsDiv = document.querySelector('#divImage')
 
-  if (!comicsDiv || !comicsDiv.innerHTML) setTimeout(onload, 2000)
+  if (!comicsDiv || !comicsDiv.innerHTML) {
+    setTimeout(onload, 2000)
+    return
+  }
 
   const images = comicsDiv.querySelectorAll('img')
 

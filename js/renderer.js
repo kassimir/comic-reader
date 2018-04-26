@@ -32,7 +32,6 @@ const recentDB = require('./database/recent.database')
 
 let descNode, issueNode, iframeTO, loaded = false
 
-
 // This is here, because the main page has a bunch of iframes on it that will
 // block my code from running. This script here will force code into the page
 // and destroy all the iframes and allow my code to work.
@@ -59,16 +58,46 @@ qi('opendev').addEventListener('click', () => {
   q('webview').openDevTools()
 })
 
+function search(){
+  const keyword = q('#search-input').value.replace(' ', '+')
+
+  function ipcMessage(e) {
+    if (e.channel === 'end') clearHidden()
+
+    const comic = e.args[0]
+
+    if (!comic.link || !comic.title || !comic.issues) return
+
+    const searchDiv = q('#search-results')
+
+    const resultDiv = create('div', {class: 'search-table'})
+    const icon = create('span', {class: ['fas', 'fa-info-circle']}, {'click': () => navigation('description', {section: 'search', link: comic.link})})
+    const titleSpan = create('span', {textContent: comic.title, style: {marginLeft: '10px'}}, {'click': () => navigation('description', {section: 'search', link: comic.link, view: 'issue'})})
+    const titleDiv = create('div')
+    const issueSpan = create('span', {textContent: comic.issues}, {'click': () => navigation('description', {section: 'search', link: comic.link, view: 'issue'})})
+
+    titleDiv.appendChild(icon)
+    titleDiv.appendChild(titleSpan)
+    resultDiv.appendChild(titleDiv)
+    resultDiv.appendChild(issueSpan)
+    searchDiv.appendChild(resultDiv)
+  }
+
+  bgRender(`http://readcomiconline.to/Search/Comic?keyword=${keyword}`, 'js/preload/search.preload.js', {'ipc-message': ipcMessage})
+}
 // STEP ONE:
 // Navigate to the site, then steal its front page
 function mainRender() {
 
+  // Set up the Home button
+  // TODO: Move this out of this main function
   if (reader.innerHTML) {
     reader.innerHTML = ''
     qi('home').style.cursor = 'default'
     qi('home').removeEventListener('click', mainRender)
   }
 
+  // I might change this to build the tiles as the messages come in
   function ipcMessage(e) {
     switch(e.channel) {
       case 'msg': console.log(e.args[0]); break
@@ -89,6 +118,11 @@ function mainRender() {
 window.onload = mainRender
 
 function buildTiles() {
+
+  // TODO: Rewrite code for separate reader window for the comic itself. That way, I don't need to
+  // TODO: all these insertBefore shenanigans. I can keep the specific locations and build inside
+  // TODO: of them.
+
   // Destroy the hidden webview
   clearHidden()
   // Most Recently Read is built differently
@@ -161,7 +195,7 @@ function buildTiles() {
         const thisBookDate = new Date(recentDB[item].date)
         let prepend
         let prependDate = new Date(new Date().getDate() - 100)
-        
+
         read.forEach( title => {
           const readTitle = title.querySelector('span').textContent
           const readDate = new Date(recentDB[readTitle].date)
@@ -181,6 +215,13 @@ function buildTiles() {
       }
     }
   }
+
+  // Empty div for showing search results
+  const searchResults = create('div', {id: 'search-results', style: {width: '100%', marginTop: '20px'}})
+  const searchDesc = create('div', {id: 'search-desc', style: {width: '100%', marginTop: '20px'}})
+  reader.insertBefore(searchDesc, reader.childNodes[0])
+  reader.insertBefore(searchResults, reader.childNodes[0])
+
 }
 
 // This is the function to "navigate" between pages
@@ -194,6 +235,7 @@ function navigation(page, e) {
     const comicLink = e.link;
     let desc, comicTitle
     let view = 'desc'
+    let loadIssue = e.view === 'issue'
     const issueFragment = document.createDocumentFragment()
     const descFragment = document.createDocumentFragment()
 
@@ -282,6 +324,9 @@ function navigation(page, e) {
 
       issueFragment.appendChild(issueContainer)
       issueNode = issueFragment.cloneNode(true)
+
+      // This is a temporary, hacky way to load issues instead of description
+      if (loadIssue) toggleView()
     }
 
     function toggleView() {
@@ -303,12 +348,13 @@ function navigation(page, e) {
         }
         issueNode = temp.cloneNode(true)
         view = 'issue'
+        if (loadIssue) loadIssue = null
       } else {
         qi('desc-read-icon').classList.remove('fa-book')
         qi('desc-read-icon').classList.add('fa-list')
         qi('desc-issue-toggle').textContent = 'Show Issues'
         let temp = descNode.cloneNode(true)
-        desc.removeChild(desc.querySelector('.issue-container'))
+        if (!loadIssue) desc.removeChild(desc.querySelector('.issue-container'))
         desc.appendChild(descNode)
         descNode = temp.cloneNode(true)
         view = 'desc'
@@ -343,13 +389,6 @@ function bgRender(src, preload, listeners) {
   if (!listeners['load-commit']) listeners['load-commit'] = loadCommit
   const backgroundWebview = create('webview', {src: src, preload: preload}, listeners)
   hidden.appendChild(backgroundWebview)
-  const mute = setInterval(() => {
-    const wv = q('webview')
-    if (wv.getWebContents()) {
-      wv.setAudioMuted(true)
-      clearInterval(mute)
-    }
-  }, 500)
 }
 
 // I kept forgetting to do this, so I just made a function for it
