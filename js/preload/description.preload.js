@@ -11,9 +11,10 @@ function onload() {
 
   // The section with the information about the comic
   const about = document.querySelector('.barContent')
-  //
+  const cover = document.querySelector('#rightside img').src
   const info = about.children[0].querySelectorAll('p')
   const data = {
+    'cover': cover,
     'title': about.querySelector('.bigChar').textContent,
     'artist': [],
     'genres': [],

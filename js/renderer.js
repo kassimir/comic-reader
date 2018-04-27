@@ -57,9 +57,16 @@ qi('debug').addEventListener('click', () => {
 qi('opendev').addEventListener('click', () => {
   q('webview').openDevTools()
 })
+loader('start', true)
 
+// TODO: Fix the search for only one result. If there's only one result
+// TODO: the website takes you to the actual comic, which throws off my code.
 function search(){
+  loader('start')
+
   const keyword = q('#search-input').value.replace(' ', '+')
+
+  if (q('#search-results').innerHTML) q('#search-results').innerHTML = ''
 
   function ipcMessage(e) {
     if (e.channel === 'end') clearHidden()
@@ -139,6 +146,8 @@ function mainRender() {
     q('#topmonth-desc').innerHTML = ''
     q('#topweek-desc').innerHTML = ''
     q('#mostview-desc').innerHTML = ''
+    q('#search-results').innerHTML = ''
+    q('#search-desc').innerHTML = ''
   }
 }
 
@@ -166,16 +175,17 @@ function buildTile(tile, section) {
 // in the render div
 function navigation(page, e) {
   //TODO: This function is pretty huge. Make it smaller.
+  loader('start')
 
   // Shows the descriptiong of the selected comic
   if (page === 'description') {
     const descId = `${e.section}-desc`
     const comicLink = e.link
-    const comicCover = e.cover
     const issueFragment = document.createDocumentFragment()
     const descFragment = document.createDocumentFragment()
 
     let desc, comicTitle
+    let comicCover = e.cover
     let view = 'desc'
     let loadIssue = e.view === 'issue'
 
@@ -189,6 +199,8 @@ function navigation(page, e) {
       desc = qi(descId)
       const descArgs = e.args[0].desc
       comicTitle = descArgs.title
+      console.log('cover: ', descArgs.cover)
+      if (!comicCover) comicCover = descArgs.cover
       // I contemplated just writing everything with .innerHTML, simply because
       // there are so many elements being made, but after a lot of research, it
       // is supposed to be faster this way, so I chose it. I may update these to
@@ -329,6 +341,8 @@ function navigation(page, e) {
 }
 
 function bgRender(src, preload, listeners) {
+  // There should never be two hidden webviews
+  if (qi('hidden').querySelector('webview')) return
   loaded = false
   if (!listeners['load-commit']) listeners['load-commit'] = loadCommit
   const backgroundWebview = create('webview', {src: src, preload: preload}, listeners)
@@ -339,7 +353,24 @@ function bgRender(src, preload, listeners) {
 // that is easy to remember after every time I create a hidden webview
 function clearHidden() {
   loaded = true
+  loader('stop')
   clearInterval(iframeTO)
   iframeTO = null
   if (hidden.childNodes.length) {hidden.removeChild(q('webview'))}
+}
+
+function loader(type, main) {
+  if (type === 'start') {
+    if (q('.loader')) return
+    const loadScreen = main
+      ? create('div', {class: 'loader', style: {backgroundColor: 'black'}}, {'click': e => e.preventDefault()})
+      : create('div', {class: 'loader'}, {'click': e => e.preventDefault()})
+
+    const spinner = create('span', {class: ['fas', 'fa-spinner', 'fa-10x']})
+    loadScreen.appendChild(spinner)
+    document.body.appendChild(loadScreen)
+  } else if (type === 'stop') {
+    if (!q('.loader')) return
+    document.body.removeChild(q('.loader'))
+  }
 }
