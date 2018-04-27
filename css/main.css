@@ -59,9 +59,11 @@
 .fas.fa-home {
     color: black;
     margin-left: 10px;
+    display: none;
+    cursor: pointer;
 }
 
-#reader {
+.reader-view {
     position: absolute;
     top: 55px;
     left: 0;
@@ -71,6 +73,8 @@
     overflow-y: auto;
     color: white;
 }
+
+#reader { z-index: 1; }
 
 .link:hover, .link-read:hover {
     text-decoration: underline;

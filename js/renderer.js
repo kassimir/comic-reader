@@ -88,6 +88,8 @@ function search(){
 // STEP ONE:
 // Navigate to the site, then steal its front page
 function mainRender() {
+  // Hide the Home button, if it is showing
+  if (qi('home').style.display === 'block') rebuild()
 
   function ipcMessage(e) {
     switch(e.channel) {
@@ -104,15 +106,39 @@ function mainRender() {
   }
 
   bgRender('http://readcomiconline.to', 'js/preload/tops.preload.js', {'ipc-message': ipcMessage})
+
+  // Recently Read
   if (Object.keys(recentDB).length) {
-    // sort recently read
+    // sort recently read by date, so it displays in the appropriate order
     const sortedRecent = Object.keys(recentDB).sort( (a, b) => {
       return new Date(recentDB[b].date) - new Date(recentDB[a].date)
     })
+
     sortedRecent.forEach( c => {
       const comic = recentDB[c]
       buildTile(new Tile(c, comic.cover, comic.link), 'recent')
     })
+  }
+
+  function rebuild() {
+    qi('home').style.display = 'none'
+    document.body.removeChild(qi('comic'))
+    q('#recent .carousel-inner').innerHTML = ''
+    q('#recent .carousel-inner').innerHTML = ''
+    q('#latest .carousel-inner').innerHTML = ''
+    q('#newest .carousel-inner').innerHTML = ''
+    q('#topday .carousel-inner').innerHTML = ''
+    q('#topmonth .carousel-inner').innerHTML = ''
+    q('#topweek .carousel-inner').innerHTML = ''
+    q('#mostview .carousel-inner').innerHTML = ''
+    q('#recent-desc').innerHTML = ''
+    q('#recent-desc').innerHTML = ''
+    q('#latest-desc').innerHTML = ''
+    q('#newest-desc').innerHTML = ''
+    q('#topday-desc').innerHTML = ''
+    q('#topmonth-desc').innerHTML = ''
+    q('#topweek-desc').innerHTML = ''
+    q('#mostview-desc').innerHTML = ''
   }
 }
 
@@ -132,88 +158,9 @@ function buildTile(tile, section) {
   comicDiv.appendChild(container)
 
   function onclick() {
-      navigation('description', {link: tile.link, section: section})
+      navigation('description', {link: tile.link, section: sect, cover: tile.img})
   }
 }
-
-//
-// function buildTiles() {
-//
-//   // Destroy the hidden webview
-//   clearHidden()
-//   // Most Recently Read is built differently
-//   if (Object.keys(recentDB).length) {
-//     frontPage['recent'] = {}
-//     for (let comic in recentDB) {
-//       frontPage.recent[comic] = new Tile(recentDB[comic].cover, recentDB[comic].link)
-//     }
-//   }
-//
-//   for (let section in frontPage) {
-//     function loadSearch(e) {
-//       if (e.target.nodeName === 'IMG') {
-//         currentComic.cover = e.target.src
-//         currentComic.link = e.target.dataset.link
-//         currentComic.title = e.target.parentElement.children[1].textContent
-//       } else {
-//         currentComic.cover = e.target.parentElement.children[0].src
-//         currentComic.link = e.target.dataset.link
-//         currentComic.title = e.target.textContent
-//       }
-//       navigation('description', {link: e.target.dataset.link, section: e.target.dataset.section})
-//     }
-//
-//     // TODO: Make a way to display issues instead of description - currently defaults to always showing description first
-//     // change to just setting width
-//     const div = create('div', {class: 'carousel-inner', style: {width: Object.keys(frontPage[section]).length * 20 + '%'}}, {'click': loadSearch})
-//
-//     for (let item in frontPage[section]) {
-//       const container = create('div', {style: {display: 'flex', 'flex-direction': 'column'}})
-//       const img = create('img', {'data-link': frontPage[section][item].link, 'data-section': section, class: 'link', src: frontPage[section][item].img, style: {width: '20vw', margin: '0 2.25vw'}})
-//       const title = create('span', {'data-link': frontPage[section][item].link, 'data-section': section, class: 'link', innerText: item, style: {color: 'white', margin: '7px'}})
-//       if (section === 'recent') container.id = item.replace(/[\s()]/g, '')
-//       container.appendChild(img)
-//       container.appendChild(title)
-//       div.appendChild(container)
-//
-//       if (section !== 'recent' || !carousel.children.length) {
-//         carousel.appendChild(div)
-//       } else {
-//         // I'm not sure if this is the best way to go about this, but it sorts via date
-//         // so recent items show up in the order in which they were read (most recent first)
-//         // I could probably do a sort like what I do with the issues, but this code works for now
-//         const read = carousel.querySelectorAll('div')
-//         const thisBookDate = new Date(recentDB[item].date)
-//         let prepend
-//         let prependDate = new Date(new Date().getDate() - 100)
-//
-//         read.forEach( title => {
-//           const readTitle = title.querySelector('span').textContent
-//           const readDate = new Date(recentDB[readTitle].date)
-//           if (!prependDate) prependDate = readDate
-//           if (thisBookDate > readDate && readDate > prependDate) {
-//             prepend = readTitle
-//             prependDate = recentDB[readTitle].date
-//           }
-//         })
-//
-//         if (prepend) {
-//           const prependDiv = q(`#${prepend.replace(/[\s()]/g, '')}`)
-//           div.insertBefore(container, prependDiv)
-//         } else {
-//           carousel.appendChild(div)
-//         }
-//       }
-//     }
-//   }
-//
-//   // Empty div for showing search results
-//   const searchResults = create('div', {id: 'search-results', style: {width: '100%', marginTop: '20px'}})
-//   const searchDesc = create('div', {id: 'search-desc', style: {width: '100%', marginTop: '20px'}})
-//   reader.insertBefore(searchDesc, reader.childNodes[0])
-//   reader.insertBefore(searchResults, reader.childNodes[0])
-//
-// }
 
 // This is the function to "navigate" between pages
 // in the render div
@@ -223,12 +170,14 @@ function navigation(page, e) {
   // Shows the descriptiong of the selected comic
   if (page === 'description') {
     const descId = `${e.section}-desc`
-    const comicLink = e.link;
+    const comicLink = e.link
+    const comicCover = e.cover
+    const issueFragment = document.createDocumentFragment()
+    const descFragment = document.createDocumentFragment()
+
     let desc, comicTitle
     let view = 'desc'
     let loadIssue = e.view === 'issue'
-    const issueFragment = document.createDocumentFragment()
-    const descFragment = document.createDocumentFragment()
 
     function ipcMessage(e) {
       if (e.channel === 'msg') {
@@ -329,16 +278,20 @@ function navigation(page, e) {
         desc.removeChild(desc.querySelector('.desc-info'))
         desc.appendChild(issueNode)
         if (q('.issue-container span').length) {
-          q('.issue-container span').forEach( i => i.addEventListener('click', e => {
-            navigation('comic', {title: comicTitle, issue: e.target.textContent, link: e.target.dataset.link})
-          }))
+          q('.issue-container span').forEach( i => i.addEventListener('click', onclick))
         } else {
-          q('.issue-container span').addEventListener('click', e => {
-            navigation('comic', {title: comicTitle, issue: e.target.textContent, link: e.target.dataset.link})
-          })
+          q('.issue-container span').addEventListener('click', onclick)
         }
         issueNode = temp.cloneNode(true)
         view = 'issue'
+
+        function onclick(e) {
+          currentComic.title = comicTitle
+          currentComic.cover = comicCover
+          currentComic.link = comicLink
+          navigation('comic', {title: comicTitle, issue: e.target.textContent, link: e.target.dataset.link})
+        }
+
         if (loadIssue) loadIssue = null
       } else {
         qi('desc-read-icon').classList.remove('fa-book')
@@ -357,21 +310,21 @@ function navigation(page, e) {
     // Save to Recently Read database
     writeRecent(currentComic, e.issue, e.link)
     // Set up Home button
-    qi('home').addEventListener('click', mainRender)
-    qi('home').style.cursor = 'pointer'
+    qi('home').style.display = 'block'
 
     function ipcMessage(e) {
       clearHidden()
-      reader.innerHTML = ''
+      const comicPanel = create('div', {class: 'reader-view', id: 'comic', style: {zIndex: '2'}})
       const div = create('div', {style: {width: '100%', display: 'flex', justifyContent: 'center', flexDirection: 'column'}})
-      reader.appendChild(div)
+      comicPanel.appendChild(div)
       e.args[0].forEach( i => {
         const img = create('img', {src: i})
         div.appendChild(img)
       })
+      document.body.appendChild(comicPanel)
     }
 
-    bgRender(e.link, './js/preload/comic.preload.js', {'ipc-message': ipcMessage})
+    bgRender(e.link + '&readType=1', './js/preload/comic.preload.js', {'ipc-message': ipcMessage})
   }
 }
 
