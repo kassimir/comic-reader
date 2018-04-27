@@ -89,140 +89,131 @@ function search(){
 // Navigate to the site, then steal its front page
 function mainRender() {
 
-  // Set up the Home button
-  // TODO: Move this out of this main function
-  if (reader.innerHTML) {
-    reader.innerHTML = ''
-    qi('home').style.cursor = 'default'
-    qi('home').removeEventListener('click', mainRender)
-  }
-
-  // I might change this to build the tiles as the messages come in
   function ipcMessage(e) {
     switch(e.channel) {
       case 'msg': console.log(e.args[0]); break
-      case 'tab-newest': frontPage.newest[e.args[0].title] = new Tile(e.args[0].img, e.args[0].link); break
-      case 'tab-top-day': frontPage.topday[e.args[0].title] = new Tile(e.args[0].img, e.args[0].link); break
-      case 'tab-top-week': frontPage.topweek[e.args[0].title] = new Tile(e.args[0].img, e.args[0].link); break
-      case 'tab-top-month': frontPage.topmonth[e.args[0].title] = new Tile(e.args[0].img, e.args[0].link); break
-      case 'tab-mostview': frontPage.mostpopular[e.args[0].title] = new Tile(e.args[0].img, e.args[0].link); break
-      case 'latest': frontPage.latest[e.args[0].title] = new Tile(e.args[0].img, e.args[0].link); break
-      case 'end': buildTiles(); break
+      case 'tab-newest': buildTile(new Tile(e.args[0].title, e.args[0].img, e.args[0].link), e.channel); break
+      case 'tab-top-day': buildTile(new Tile(e.args[0].title, e.args[0].img, e.args[0].link), e.channel); break
+      case 'tab-top-week': buildTile(new Tile(e.args[0].title, e.args[0].img, e.args[0].link), e.channel); break
+      case 'tab-top-month': buildTile(new Tile(e.args[0].title, e.args[0].img, e.args[0].link), e.channel); break
+      case 'tab-mostview': buildTile(new Tile(e.args[0].title, e.args[0].img, e.args[0].link), e.channel); break
+      case 'latest': buildTile(new Tile(e.args[0].title, e.args[0].img, e.args[0].link), e.channel); break
+      case 'end': clearHidden(); break
       default: console.log(e);
     }
   }
 
   bgRender('http://readcomiconline.to', 'js/preload/tops.preload.js', {'ipc-message': ipcMessage})
+  if (Object.keys(recentDB).length) {
+    // sort recently read
+    const sortedRecent = Object.keys(recentDB).sort( (a, b) => {
+      return new Date(recentDB[b].date) - new Date(recentDB[a].date)
+    })
+    sortedRecent.forEach( c => {
+      const comic = recentDB[c]
+      buildTile(new Tile(c, comic.cover, comic.link), 'recent')
+    })
+  }
 }
 
 window.onload = mainRender
 
-function buildTiles() {
+function buildTile(tile, section) {
+  const sect = section.replace(/(tab|-)/g,'')
+  const comicDiv = qi(`${sect}`).querySelector('.carousel-inner')
 
-  // TODO: Rewrite code for separate reader window for the comic itself. That way, I don't need to
-  // TODO: all these insertBefore shenanigans. I can keep the specific locations and build inside
-  // TODO: of them.
+  const container = create('div', {style: {display: 'flex', 'flex-direction': 'column'}}, {'click': onclick})
+  const img = create('img', {'data-link': tile.link, 'data-section': sect, class: 'link', src: tile.img, style: {width: '20vw', margin: '0 2.25vw'}})
+  const title = create('span', {'data-link': tile.link, 'data-section': sect, class: 'link', innerText: tile.title, style: {color: 'white', margin: '7px'}})
+  if (section === 'recent') container.id = tile.title.replace(/[\s()]/g, '')
 
-  // Destroy the hidden webview
-  clearHidden()
-  // Most Recently Read is built differently
-  if (Object.keys(recentDB).length) {
-    frontPage['recent'] = {}
-    for (let comic in recentDB) {
-      frontPage.recent[comic] = new Tile(recentDB[comic].cover, recentDB[comic].link)
-    }
+  container.appendChild(img)
+  container.appendChild(title)
+  comicDiv.appendChild(container)
+
+  function onclick() {
+      navigation('description', {link: tile.link, section: section})
   }
-
-  for (let section in frontPage) {
-    function loadSearch(e) {
-      if (e.target.nodeName === 'IMG') {
-        currentComic.cover = e.target.src
-        currentComic.link = e.target.dataset.link
-        currentComic.title = e.target.parentElement.children[1].textContent
-      } else {
-        currentComic.cover = e.target.parentElement.children[0].src
-        currentComic.link = e.target.dataset.link
-        currentComic.title = e.target.textContent
-      }
-      navigation('description', {link: e.target.dataset.link, section: e.target.dataset.section})
-    }
-    const heading = () => {
-      switch (section) {
-        case 'recent': return 'MOST RECENTLY READ'
-        case 'newest': return 'MOST RECENTLY ADDED'
-        case 'topday': return 'TOP TODAY'
-        case 'topweek': return 'TOP WEEK'
-        case 'topmonth': return 'TOP MONTH'
-        case 'mostpopular': return 'TOP OF ALL TIME'
-        case 'latest': return 'MOST RECENTLY UPDATED'
-      }
-    }
-    const sectionHeading = create('p', {textContent: heading(), class: 'section-title'})
-    const description = create('div', {class: 'section-desc', id: `${section}-desc`})
-    const carousel = create('div', {class: 'carousel-outer'})
-
-    carousel.id = section
-    // TODO: Make a way to display issues instead of description - currently defaults to always showing description first
-    const div = create('div', {class: 'carousel-inner', style: {width: Object.keys(frontPage[section]).length * 20 + '%'}}, {'click': loadSearch})
-
-    // Make sure Recent is at the top of the page... until Reading List is completed, of course.
-    if (section !== 'recent') {
-      reader.appendChild(sectionHeading)
-      reader.appendChild(carousel)
-      reader.appendChild(description)
-    } else {
-      reader.insertBefore(description, reader.childNodes[0])
-      reader.insertBefore(carousel, reader.childNodes[0])
-      reader.insertBefore(sectionHeading, reader.childNodes[0])
-    }
-
-    for (let item in frontPage[section]) {
-      const container = create('div', {style: {display: 'flex', 'flex-direction': 'column'}})
-      const img = create('img', {'data-link': frontPage[section][item].link, 'data-section': section, class: 'link', src: frontPage[section][item].img, style: {width: '20vw', margin: '0 2.25vw'}})
-      const title = create('span', {'data-link': frontPage[section][item].link, 'data-section': section, class: 'link', innerText: item, style: {color: 'white', margin: '7px'}})
-      if (section === 'recent') container.id = item.replace(/[\s()]/g, '')
-      container.appendChild(img)
-      container.appendChild(title)
-      div.appendChild(container)
-
-      if (section !== 'recent' || !carousel.children.length) {
-        carousel.appendChild(div)
-      } else {
-        // I'm not sure if this is the best way to go about this, but it sorts via date
-        // so recent items show up in the order in which they were read (most recent first)
-        // I could probably do a sort like what I do with the issues, but this code works for now
-        const read = carousel.querySelectorAll('div')
-        const thisBookDate = new Date(recentDB[item].date)
-        let prepend
-        let prependDate = new Date(new Date().getDate() - 100)
-
-        read.forEach( title => {
-          const readTitle = title.querySelector('span').textContent
-          const readDate = new Date(recentDB[readTitle].date)
-          if (!prependDate) prependDate = readDate
-          if (thisBookDate > readDate && readDate > prependDate) {
-            prepend = readTitle
-            prependDate = recentDB[readTitle].date
-          }
-        })
-
-        if (prepend) {
-          const prependDiv = q(`#${prepend.replace(/[\s()]/g, '')}`)
-          div.insertBefore(container, prependDiv)
-        } else {
-          carousel.appendChild(div)
-        }
-      }
-    }
-  }
-
-  // Empty div for showing search results
-  const searchResults = create('div', {id: 'search-results', style: {width: '100%', marginTop: '20px'}})
-  const searchDesc = create('div', {id: 'search-desc', style: {width: '100%', marginTop: '20px'}})
-  reader.insertBefore(searchDesc, reader.childNodes[0])
-  reader.insertBefore(searchResults, reader.childNodes[0])
-
 }
+
+//
+// function buildTiles() {
+//
+//   // Destroy the hidden webview
+//   clearHidden()
+//   // Most Recently Read is built differently
+//   if (Object.keys(recentDB).length) {
+//     frontPage['recent'] = {}
+//     for (let comic in recentDB) {
+//       frontPage.recent[comic] = new Tile(recentDB[comic].cover, recentDB[comic].link)
+//     }
+//   }
+//
+//   for (let section in frontPage) {
+//     function loadSearch(e) {
+//       if (e.target.nodeName === 'IMG') {
+//         currentComic.cover = e.target.src
+//         currentComic.link = e.target.dataset.link
+//         currentComic.title = e.target.parentElement.children[1].textContent
+//       } else {
+//         currentComic.cover = e.target.parentElement.children[0].src
+//         currentComic.link = e.target.dataset.link
+//         currentComic.title = e.target.textContent
+//       }
+//       navigation('description', {link: e.target.dataset.link, section: e.target.dataset.section})
+//     }
+//
+//     // TODO: Make a way to display issues instead of description - currently defaults to always showing description first
+//     // change to just setting width
+//     const div = create('div', {class: 'carousel-inner', style: {width: Object.keys(frontPage[section]).length * 20 + '%'}}, {'click': loadSearch})
+//
+//     for (let item in frontPage[section]) {
+//       const container = create('div', {style: {display: 'flex', 'flex-direction': 'column'}})
+//       const img = create('img', {'data-link': frontPage[section][item].link, 'data-section': section, class: 'link', src: frontPage[section][item].img, style: {width: '20vw', margin: '0 2.25vw'}})
+//       const title = create('span', {'data-link': frontPage[section][item].link, 'data-section': section, class: 'link', innerText: item, style: {color: 'white', margin: '7px'}})
+//       if (section === 'recent') container.id = item.replace(/[\s()]/g, '')
+//       container.appendChild(img)
+//       container.appendChild(title)
+//       div.appendChild(container)
+//
+//       if (section !== 'recent' || !carousel.children.length) {
+//         carousel.appendChild(div)
+//       } else {
+//         // I'm not sure if this is the best way to go about this, but it sorts via date
+//         // so recent items show up in the order in which they were read (most recent first)
+//         // I could probably do a sort like what I do with the issues, but this code works for now
+//         const read = carousel.querySelectorAll('div')
+//         const thisBookDate = new Date(recentDB[item].date)
+//         let prepend
+//         let prependDate = new Date(new Date().getDate() - 100)
+//
+//         read.forEach( title => {
+//           const readTitle = title.querySelector('span').textContent
+//           const readDate = new Date(recentDB[readTitle].date)
+//           if (!prependDate) prependDate = readDate
+//           if (thisBookDate > readDate && readDate > prependDate) {
+//             prepend = readTitle
+//             prependDate = recentDB[readTitle].date
+//           }
+//         })
+//
+//         if (prepend) {
+//           const prependDiv = q(`#${prepend.replace(/[\s()]/g, '')}`)
+//           div.insertBefore(container, prependDiv)
+//         } else {
+//           carousel.appendChild(div)
+//         }
+//       }
+//     }
+//   }
+//
+//   // Empty div for showing search results
+//   const searchResults = create('div', {id: 'search-results', style: {width: '100%', marginTop: '20px'}})
+//   const searchDesc = create('div', {id: 'search-desc', style: {width: '100%', marginTop: '20px'}})
+//   reader.insertBefore(searchDesc, reader.childNodes[0])
+//   reader.insertBefore(searchResults, reader.childNodes[0])
+//
+// }
 
 // This is the function to "navigate" between pages
 // in the render div

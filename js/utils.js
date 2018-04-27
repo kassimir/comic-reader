@@ -25,6 +25,7 @@ const create = (ele, attrs, listeners) => {
   const e = document.createElement(ele)
   // add any attributes
   if (attrs) {
+    // TODO: change this to Object.keys(attrs).forEach() to remove hasOwnProperty check
     for (let key in attrs) {
       if (attrs.hasOwnProperty(key)) {
         if (typeof attrs[key] === 'object' && !Array.isArray(attrs[key])) {
@@ -66,11 +67,15 @@ const send = (msg, channel = 'default', type = 'h') => {
   else ipcMain.send(channel, msg)
 }
 
-
-// This gets rid of the Issue from the text
-// A lot of times the text is something like
-// Batman Issue #51. This removes the issue
-// and grabs the title of the comic itself
+// This will grab various parts of the Comic itself based off
+// of the Comic issue title. For instance Deadpool (2008) Issue #69
+// txt = Comic issue title text
+// type = type of return:
+//   'number' is easy: it only returns the last word or number in the title
+//   'name' will remove 'Issue #69' and return 'Deadpool (2008)'
+//   'issue' will return 'Issue #69'
+// For something like 'Elseworlds: Superman TPB', both 'number' and 'issue'
+// will return 'TPB'
 function getOrRemoveIssue(txt, type) {
   const split = txt.split(' ')
   if (split.length < 2) return txt
@@ -88,7 +93,7 @@ function getOrRemoveIssue(txt, type) {
   if (type === 'number') return last
   else if (type === 'issue') {
     // If the issue is a word (Full, TPB, etc) it will not parseInt
-    // Same as if it has # in it
+    // Same as if it has '#' in it
     if (!parseInt(last)) {
       // check if it is #[issue]
       if (last[0] === '#' || nameCheck(secondLast)) return secondLast + ' ' + last
@@ -104,7 +109,7 @@ function getOrRemoveIssue(txt, type) {
     // Note that if something is titled Title TPB 1, it will return Title TPB
     // but I've never seen that, so . . . something to watch out for
     if ( (last[0] === '#' && nameCheck(secondLast)) || (parseInt(last) && nameCheck(secondLast)) ) return split.pop() && split.pop() && split.join(' ')
-    // Just in case it isn't preceeded "Issue" however . . .
+    // Just in case it isn't preceeded by "Issue" however . . .
     else if ( (last[0] === '#' && !nameCheck(secondLast))
       || (parseInt(last) && !nameCheck(secondLast))
       // Lastly, if there's an issue number but no # and no "Issue"
@@ -114,7 +119,6 @@ function getOrRemoveIssue(txt, type) {
 }
 
 function sortIssues(arr) {
-  // TODO: write a function that sorts the issues in a not stupid way
   if (arr.length < 2) return arr
 
   const sortedArr = []
@@ -127,6 +131,7 @@ function sortIssues(arr) {
       return ish[0]
     }))
 
+  // Finds all issues of a specific type and sorts them
   function mySort(a, type) {
     return a.filter( i => i.includes(type)).sort( (a,b) => {
       let first = getOrRemoveIssue(a, 'number')
@@ -137,12 +142,14 @@ function sortIssues(arr) {
     })
   }
 
+  // Find "Issue"s first
   if (issueTypes.has('Issue')) {
     const issueArr = mySort(arr, 'Issue');
 
     issueArr.forEach( i => sortedArr.push(i))
   }
 
+  // Remove "Issue"s from the array in order to loop over the remaining issue types
   issueTypes.delete('Issue')
   if (issueTypes.size) {
     issueTypes.forEach( type => {
@@ -155,6 +162,8 @@ function sortIssues(arr) {
   return sortedArr
 }
 
+// Writes to "database"
+// TODO: utilize a model
 function writeRecent(comic, issue, link) {
   const recentDB = require('../database/recent.database')
   issue = getOrRemoveIssue(issue, 'issue')

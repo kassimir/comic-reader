@@ -1,5 +1,7 @@
 class Tile {
-  constructor(img, link) {
+
+  constructor(title, img, link) {
+    this.title = title
     this.img = img
     this.link = link
   }
