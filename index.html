@@ -11,8 +11,6 @@
     <div id="nav">
       <i class="fas fa-home fa-2x" id="home" onclick="mainRender()"></i>
       <div id="title"></div>
-      <!--<button id="debug">DEBUG</button>-->
-      <!--<button id="opendev">DEV TOOLS</button>-->
       <div id="search">
         <form action="javascript:void(0);" onsubmit="search()">
           <input type="text" placeholder="Search" name="search-input" id="search-input">
@@ -28,6 +26,12 @@
     <div class="reader-view" id="reader">
       <div id="search-results"></div>
       <div id="search-desc" style="margin-top: 20px;"></div>
+
+      <div class="carousel-outer" id="readinglist">
+        <p class="section-title">READING LIST</p>
+        <div class="carousel-inner"></div>
+      </div>
+      <div class="section-desc" id="readinglist-desc"></div>
 
       <div class="carousel-outer" id="recent">
         <p class="section-title">MOST RECENTLY READ</p>

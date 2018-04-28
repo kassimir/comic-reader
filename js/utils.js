@@ -177,6 +177,14 @@ function writeRecent(comic, link) {
   send({type: 'recent', data: recentDB}, 'update', 'r')
 }
 
+function writeReadingList(comic) {
+  const readingDB = require('../database/reading.database')
+  if (!readingDB[comic.title]) {
+    readingDB[comic.title] = {date: new Date(), link: comic.link, cover: comic.cover}
+    send({type: 'reading', data: readingDB}, 'update', 'r')
+  }
+}
+
 module.exports = {
   q: q,
   qi: qi,
@@ -185,5 +193,6 @@ module.exports = {
   create: create,
   getOrRemoveIssue: getOrRemoveIssue,
   sortIssues: sortIssues,
-  writeRecent: writeRecent
+  writeRecent: writeRecent,
+  writeReadingList: writeReadingList
 }

@@ -6,6 +6,7 @@ const create = utils.create
 const getIssue = utils.getOrRemoveIssue
 const sortIssues = utils.sortIssues
 const writeRecent = utils.writeRecent
+const writeReadingList = utils.writeReadingList
 
 // Hidden div for rendering pages in the background
 const hidden = qi('hidden')
@@ -30,6 +31,7 @@ const currentComic = {
 
 // This is the database for Most Recently Read
 const recentDB = require('./database/recent.database')
+const readingDB = require('./database/reading.database')
 
 let descNode, issueNode, iframeTO, loaded = false
 
@@ -49,19 +51,7 @@ function loadCommit() {
       if (modal && modal.innerHTML) modal.click()
     } else clearInterval(iframeTO)}, 2000)
 }
-//
-// qi('debug').addEventListener('click', () => {
-//   hidden.style.visibility = 'visible'
-//   q('html').style.height = '100%'
-//   q('body').style.height = '100%'
-//   q('webview').style.height = '100%'
-//   hidden.style.height = '100%'
-//   reader.style.display = 'none'
-// })
-//
-// qi('opendev').addEventListener('click', () => {
-//   q('webview').openDevTools()
-// })
+
 loader('start', true)
 
 // TODO: Fix the search for only one result. If there's only one result
@@ -129,6 +119,18 @@ function mainRender() {
     sortedRecent.forEach( c => {
       const comic = recentDB[c]
       buildTile(new Tile(c, comic.cover, comic.link), 'recent')
+    })
+  }
+
+  // Reading List
+  if (Object.keys(readingDB).length) {
+    const sortedReading = Object.keys(readingDB).sort( (a, b) => {
+      return new Date(readingDB[b].date) - new Date(readingDB[a].date)
+    })
+
+    sortedReading.forEach( c => {
+      const comic = readingDB[c]
+      buildTile(new Tile(c, comic.cover, comic.link), 'readinglist')
     })
   }
 
@@ -221,7 +223,7 @@ function navigation(page, e) {
       const descReadIcon = create('span', {class: ['fas', 'fa-list'], id: 'desc-read-icon'})
       const listIssues = create('span', {id: 'desc-issue-toggle', class: 'link', textContent: 'Show Issues'}, {'click': () => toggleView()})
       const addIcon = create('span', {class: ['fas', 'fa-plus']})
-      const addToReadingList = create('span', {class: 'link', textContent: 'Add To Reading List'})
+      const addToReadingList = create('span', {class: 'link', textContent: 'Add To Reading List'}, {'click': readingList})
       const closeDescription = create('div', {style: {textAlign: 'right', width: '33%'}}, {'click': () => desc.innerHTML = ''})
       const closeDesc = create('span', {class: 'link', textContent: 'x', style: {marginRight: '20px'}})
 
@@ -321,6 +323,11 @@ function navigation(page, e) {
         descNode = temp.cloneNode(true)
         view = 'desc'
       }
+    }
+
+    function readingList(e) {
+      const comic = {title: comicTitle, link: comicLink, cover: comicCover}
+      writeReadingList(comic)
     }
 
     bgRender(comicLink, './js/preload/description.preload.js', {'ipc-message': ipcMessage})
