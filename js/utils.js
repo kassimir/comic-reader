@@ -77,6 +77,8 @@ const send = (msg, channel = 'default', type = 'h') => {
 // For something like 'Elseworlds: Superman TPB', both 'number' and 'issue'
 // will return 'TPB'
 function getOrRemoveIssue(txt, type) {
+  if (!txt) return txt
+
   const split = txt.split(' ')
   if (split.length < 2) return txt
 
@@ -164,13 +166,12 @@ function sortIssues(arr) {
 
 // Writes to "database"
 // TODO: utilize a model
-function writeRecent(comic, issue, link) {
+function writeRecent(comic, link) {
   const recentDB = require('../database/recent.database')
-  issue = getOrRemoveIssue(issue, 'issue')
   if (!recentDB[comic.title]) {
-    recentDB[comic.title] = {date: new Date(), link: comic.link, cover: comic.cover, issues: {[issue] : link}}
+    recentDB[comic.title] = {date: new Date(), link: comic.link, cover: comic.cover, issues: {[comic.issue] : link}}
   } else {
-    recentDB[comic.title].issues[issue] = link
+    recentDB[comic.title].issues[comic.issue] = link
     recentDB[comic.title].date = new Date()
   }
   send({type: 'recent', data: recentDB}, 'update', 'r')

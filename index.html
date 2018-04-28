@@ -10,13 +10,19 @@
     <div id="hidden"></div>
     <div id="nav">
       <i class="fas fa-home fa-2x" id="home" onclick="mainRender()"></i>
-      <button id="debug">DEBUG</button>
-      <button id="opendev">DEV TOOLS</button>
+      <div id="title"></div>
+      <!--<button id="debug">DEBUG</button>-->
+      <!--<button id="opendev">DEV TOOLS</button>-->
       <div id="search">
         <form action="javascript:void(0);" onsubmit="search()">
           <input type="text" placeholder="Search" name="search-input" id="search-input">
           <i class="fas fa-search fa-2x" onclick="search()"></i>
         </form>
+      </div>
+      <div id="paginate">
+        <i class="fas fa-caret-left" id="prevButton" style="margin-right: 10px;" onclick="goPrevIssue()"></i>
+        <select name="issue-select" id="issue-select" onchange="goToIssue(event)"></select>
+        <i class="fas fa-caret-right" id="nextButton" onclick="goNextIssue()"></i>
       </div>
     </div>
     <div class="reader-view" id="reader">

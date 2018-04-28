@@ -24,13 +24,18 @@ const frontPage = {
 const currentComic = {
   title: '',
   cover: '',
-  link: ''
+  link: '',
+  issue: ''
 }
 
 // This is the database for Most Recently Read
 const recentDB = require('./database/recent.database')
 
 let descNode, issueNode, iframeTO, loaded = false
+
+// This is for the previous and next button once the comic is loaded
+// I may not need them to be global, but that's where I'm putting them
+let previousIssue, nextIssue
 
 // This is here, because the main page has a bunch of iframes on it that will
 // block my code from running. This script here will force code into the page
@@ -44,19 +49,19 @@ function loadCommit() {
       if (modal && modal.innerHTML) modal.click()
     } else clearInterval(iframeTO)}, 2000)
 }
-
-qi('debug').addEventListener('click', () => {
-  hidden.style.visibility = 'visible'
-  q('html').style.height = '100%'
-  q('body').style.height = '100%'
-  q('webview').style.height = '100%'
-  hidden.style.height = '100%'
-  reader.style.display = 'none'
-})
-
-qi('opendev').addEventListener('click', () => {
-  q('webview').openDevTools()
-})
+//
+// qi('debug').addEventListener('click', () => {
+//   hidden.style.visibility = 'visible'
+//   q('html').style.height = '100%'
+//   q('body').style.height = '100%'
+//   q('webview').style.height = '100%'
+//   hidden.style.height = '100%'
+//   reader.style.display = 'none'
+// })
+//
+// qi('opendev').addEventListener('click', () => {
+//   q('webview').openDevTools()
+// })
 loader('start', true)
 
 // TODO: Fix the search for only one result. If there's only one result
@@ -96,7 +101,7 @@ function search(){
 // Navigate to the site, then steal its front page
 function mainRender() {
   // Hide the Home button, if it is showing
-  if (qi('home').style.display === 'block') rebuild()
+  if (qi('home').style.visibility === 'visible') rebuild()
 
   function ipcMessage(e) {
     switch(e.channel) {
@@ -128,7 +133,8 @@ function mainRender() {
   }
 
   function rebuild() {
-    qi('home').style.display = 'none'
+    loader('start', true)
+    qi('home').style.visibility = 'hidden'
     document.body.removeChild(qi('comic'))
     q('#recent .carousel-inner').innerHTML = ''
     q('#recent .carousel-inner').innerHTML = ''
@@ -167,7 +173,7 @@ function buildTile(tile, section) {
   comicDiv.appendChild(container)
 
   function onclick() {
-      navigation('description', {link: tile.link, section: sect, cover: tile.img})
+    navigation('description', {link: tile.link, section: sect, cover: tile.img})
   }
 }
 
@@ -175,10 +181,11 @@ function buildTile(tile, section) {
 // in the render div
 function navigation(page, e) {
   //TODO: This function is pretty huge. Make it smaller.
-  loader('start')
 
   // Shows the descriptiong of the selected comic
   if (page === 'description') {
+    loader('start')
+
     const descId = `${e.section}-desc`
     const comicLink = e.link
     const issueFragment = document.createDocumentFragment()
@@ -199,7 +206,6 @@ function navigation(page, e) {
       desc = qi(descId)
       const descArgs = e.args[0].desc
       comicTitle = descArgs.title
-      console.log('cover: ', descArgs.cover)
       if (!comicCover) comicCover = descArgs.cover
       // I contemplated just writing everything with .innerHTML, simply because
       // there are so many elements being made, but after a lot of research, it
@@ -319,26 +325,65 @@ function navigation(page, e) {
 
     bgRender(comicLink, './js/preload/description.preload.js', {'ipc-message': ipcMessage})
   } else if (page === 'comic') {
+    loader('start', true)
     // Save to Recently Read database
-    writeRecent(currentComic, e.issue, e.link)
     // Set up Home button
-    qi('home').style.display = 'block'
+    qi('home').style.visibility = 'visible'
+
+    const baseLink = currentComic.link
+    const comicLink = e.link
 
     function ipcMessage(e) {
+      if (e.channel === 'msg') {
+        console.log(e.args[0])
+        return
+      }
       clearHidden()
-      const comicPanel = create('div', {class: 'reader-view', id: 'comic', style: {zIndex: '2'}})
-      const div = create('div', {style: {width: '100%', display: 'flex', justifyContent: 'center', flexDirection: 'column'}})
-      comicPanel.appendChild(div)
-      e.args[0].forEach( i => {
+
+      let comicPanel, comicDiv
+
+      if (!q('#comic')) {
+        comicPanel = create('div', {class: 'reader-view', id: 'comic', style: {zIndex: '2'}})
+        comicDiv = create('div', {style: {width: '100%', display: 'flex', justifyContent: 'center', flexDirection: 'column'}})
+        comicPanel.appendChild(comicDiv)
+      } else {
+        comicPanel = q('#comic')
+        comicDiv = q('#comic > div')
+        comicDiv.innerHTML = ''
+      }
+      currentComic.issue = e.args[0].nav.selectedIssue
+      writeRecent(currentComic, comicLink)
+
+      e.args[0].images.forEach( i => {
         const img = create('img', {src: i})
-        div.appendChild(img)
+        comicDiv.appendChild(img)
       })
       document.body.appendChild(comicPanel)
+
+      qi('paginate').style.display = 'flex'
+      qi('search').style.display = 'none'
+      qi('title').style.display = 'block'
+      qi('title').textContent = currentComic.title
+      const issueSelect = qi('issue-select')
+      const nav = e.args[0].nav
+      nav.issues.forEach( opt => {
+        const option = create('option', {value: `${baseLink}/${opt.val}`, textContent: opt.txt})
+        if (opt.txt === currentComic.issue) option.selected = 'selected'
+        issueSelect.add(option)
+      })
+      issueSelect.style.display = 'block'
+
+      nextIssue = nav.next
+      previousIssue = nav.prev
     }
 
     bgRender(e.link + '&readType=1', './js/preload/comic.preload.js', {'ipc-message': ipcMessage})
   }
 }
+
+function goNextIssue() {navigation('comic', {link: nextIssue})}
+function goPrevIssue() {navigation('comic', {link: previousIssue})}
+function goToIssue(e) {navigation('comic', {link: e.target.value})}
 
 function bgRender(src, preload, listeners) {
   // There should never be two hidden webviews
@@ -359,14 +404,14 @@ function clearHidden() {
   if (hidden.childNodes.length) {hidden.removeChild(q('webview'))}
 }
 
-function loader(type, main) {
+function loader(type, dark) {
   if (type === 'start') {
     if (q('.loader')) return
-    const loadScreen = main
+    const loadScreen = dark
       ? create('div', {class: 'loader', style: {backgroundColor: 'black'}}, {'click': e => e.preventDefault()})
       : create('div', {class: 'loader'}, {'click': e => e.preventDefault()})
 
-    const spinner = create('span', {class: ['fas', 'fa-spinner', 'fa-10x']})
+    const spinner = create('span', {class: ['fab', 'fa-chrome', 'fa-spin', 'fa-10x']})
     loadScreen.appendChild(spinner)
     document.body.appendChild(loadScreen)
   } else if (type === 'stop') {

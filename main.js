@@ -57,5 +57,5 @@ app.on('activate', function () {
 })
 
 ipc.on('update', (e, a) => {
-  if (a.type === 'recent') fs.writeFile('./database/recent.database.json', JSON.stringify(a.data))
+  if (a.type === 'recent') fs.writeFileSync('./database/recent.database.json', JSON.stringify(a.data))
 })
