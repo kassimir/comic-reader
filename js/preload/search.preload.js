@@ -10,6 +10,16 @@ function onload() {
     return
   }
 
+  // If there's only one search result, it returns the actual comic
+  // so instead of duplicating code from description.preload, I've decided
+  // to just destroy the search and go with the description. It doesn't
+  // seem to add much time to the render for me, but if it does cause
+  // issues, I could see rewriting it.
+   if (document.querySelector('#rightside img')) {
+    send({link: window.location.href, cover: document.querySelector('#rightside img').src}, 'desc')
+    return
+  }
+
   const tableColumns = searchResults.querySelectorAll('tr')
 
   tableColumns.forEach( (t, ind) => {

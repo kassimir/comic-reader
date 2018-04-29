@@ -62,10 +62,27 @@ function search(){
   const keyword = q('#search-input').value.replace(' ', '+')
 
   if (q('#search-results').innerHTML) q('#search-results').innerHTML = ''
+  const closeSearchDiv = create('div', {style: {textAlign: 'right', paddingRight: '20px', backgroundColor: '#5E051D', visibility: 'hidden'}})
+  const closeSeachButton = create('span', {class: 'link', textContent: 'X'}, {'click': () => {
+      q('#search-results').innerHTML = ''
+      q('#search-desc').innerHTML = ''
+    }})
+  closeSearchDiv.appendChild(closeSeachButton)
+  q('#search-results').appendChild(closeSearchDiv)
 
   function ipcMessage(e) {
-    if (e.channel === 'end') clearHidden()
-
+    if (e.channel === 'end') {
+      closeSearchDiv.style.visibility = 'visible'
+      clearHidden()
+      return
+    } else if (e.channel === 'msg') {
+      console.log(e.args[0])
+      return
+    } else if (e.channel === 'desc') {
+      clearHidden()
+      navigation('description', {link: e.args[0].link, cover: e.args[0].cover, section: 'search'})
+      return
+    }
     const comic = e.args[0]
 
     if (!comic.link || !comic.title || !comic.issues) return
@@ -87,6 +104,7 @@ function search(){
 
   bgRender(`http://readcomiconline.to/Search/Comic?keyword=${keyword}`, 'js/preload/search.preload.js', {'ipc-message': ipcMessage})
 }
+
 // STEP ONE:
 // Navigate to the site, then steal its front page
 function mainRender() {
@@ -139,7 +157,7 @@ function mainRender() {
     qi('home').style.visibility = 'hidden'
     document.body.removeChild(qi('comic'))
     q('#recent .carousel-inner').innerHTML = ''
-    q('#recent .carousel-inner').innerHTML = ''
+    q('#readinglist .carousel-inner').innerHTML = ''
     q('#latest .carousel-inner').innerHTML = ''
     q('#newest .carousel-inner').innerHTML = ''
     q('#topday .carousel-inner').innerHTML = ''
@@ -147,7 +165,7 @@ function mainRender() {
     q('#topweek .carousel-inner').innerHTML = ''
     q('#mostview .carousel-inner').innerHTML = ''
     q('#recent-desc').innerHTML = ''
-    q('#recent-desc').innerHTML = ''
+    q('#readinglist-desc').innerHTML = ''
     q('#latest-desc').innerHTML = ''
     q('#newest-desc').innerHTML = ''
     q('#topday-desc').innerHTML = ''
@@ -156,6 +174,10 @@ function mainRender() {
     q('#mostview-desc').innerHTML = ''
     q('#search-results').innerHTML = ''
     q('#search-desc').innerHTML = ''
+    q('#paginate').style.display = 'none'
+    q('#search').style.display = 'block'
+    q('#title').textContent = ''
+    q('#title').style.display = 'none'
   }
 }
 
@@ -181,6 +203,7 @@ function buildTile(tile, section) {
 
 // This is the function to "navigate" between pages
 // in the render div
+// e: link, section, cover
 function navigation(page, e) {
   //TODO: This function is pretty huge. Make it smaller.
 
