@@ -48,6 +48,10 @@
     font-size: 3vh;
 }
 
+#readinglist, #recent {
+    display: none;
+}
+
 #search-results {
     border-bottom: #5E051D;
 }

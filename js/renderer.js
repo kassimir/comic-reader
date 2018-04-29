@@ -129,6 +129,7 @@ function mainRender() {
 
   // Recently Read
   if (Object.keys(recentDB).length) {
+    qi('recent').style.display = 'block'
     // sort recently read by date, so it displays in the appropriate order
     const sortedRecent = Object.keys(recentDB).sort( (a, b) => {
       return new Date(recentDB[b].date) - new Date(recentDB[a].date)
@@ -142,6 +143,7 @@ function mainRender() {
 
   // Reading List
   if (Object.keys(readingDB).length) {
+    qi('readinglist').style.display = 'block'
     const sortedReading = Object.keys(readingDB).sort( (a, b) => {
       return new Date(readingDB[b].date) - new Date(readingDB[a].date)
     })
