@@ -7,6 +7,7 @@ const getIssue = utils.getOrRemoveIssue
 const sortIssues = utils.sortIssues
 const writeRecent = utils.writeRecent
 const writeReadingList = utils.writeReadingList
+const deleteReadingList = utils.deleteReadingList
 
 // Hidden div for rendering pages in the background
 const hidden = qi('hidden')
@@ -185,7 +186,7 @@ function mainRender() {
 
 window.onload = mainRender
 
-function buildTile(tile, section) {
+function buildTile(tile, section, first) {
   const sect = section.replace(/(tab|-)/g,'')
   const comicDiv = qi(`${sect}`).querySelector('.carousel-inner')
 
@@ -196,7 +197,11 @@ function buildTile(tile, section) {
 
   container.appendChild(img)
   container.appendChild(title)
-  comicDiv.appendChild(container)
+  if (first) {
+    comicDiv.insertBefore(container, comicDiv.children[0])
+  } else {
+    comicDiv.appendChild(container)
+  }
 
   function onclick() {
     navigation('description', {link: tile.link, section: sect, cover: tile.img})
@@ -248,12 +253,19 @@ function navigation(page, e) {
       const descReadIcon = create('span', {class: ['fas', 'fa-list'], id: 'desc-read-icon'})
       const listIssues = create('span', {id: 'desc-issue-toggle', class: 'link', textContent: 'Show Issues'}, {'click': () => toggleView()})
       const addIcon = create('span', {class: ['fas', 'fa-plus']})
-      const addToReadingList = create('span', {class: 'link', textContent: 'Add To Reading List'}, {'click': readingList})
+      const addToReadingList = create('span', {class: 'link', textContent: 'Add To Reading List'}, {'click': readingListAdd})
+      const removeIcon = create('span', {class: ['fas', 'fa-minus']})
+      const removeFromReadingList = create('span', {class: 'link', textContent: 'Remove From Reading List'}, {'click': readingListRemove})
       const closeDescription = create('div', {style: {textAlign: 'right', width: '33%'}}, {'click': () => desc.innerHTML = ''})
       const closeDesc = create('span', {class: 'link', textContent: 'x', style: {marginRight: '20px'}})
 
-      optionsContainer.appendChild(addIcon)
-      optionsContainer.appendChild(addToReadingList)
+      if (descId !== 'readinglist-desc') {
+        optionsContainer.appendChild(addIcon)
+        optionsContainer.appendChild(addToReadingList)
+      } else {
+        optionsContainer.appendChild(removeIcon)
+        optionsContainer.appendChild(removeFromReadingList)
+      }
       optionsContainer.appendChild(descReadIcon)
       optionsContainer.appendChild(listIssues)
       closeDescription.appendChild(closeDesc)
@@ -350,9 +362,17 @@ function navigation(page, e) {
       }
     }
 
-    function readingList(e) {
+    function readingListAdd() {
       const comic = {title: comicTitle, link: comicLink, cover: comicCover}
+      buildTile(new Tile(comicTitle, comicCover, comicLink), 'readinglist', true)
       writeReadingList(comic)
+    }
+
+    function readingListRemove() {
+      const comic = {title: comicTitle, link: comicLink, cover: comicCover}
+      q('#readinglist .carousel-inner').removeChild(document.querySelector(`img[data-link="${comicLink}"]`).parentNode)
+      q('#readinglist-desc').innerHTML = ''
+      deleteReadingList(comic)
     }
 
     bgRender(comicLink, './js/preload/description.preload.js', {'ipc-message': ipcMessage})

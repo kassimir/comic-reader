@@ -185,6 +185,14 @@ function writeReadingList(comic) {
   }
 }
 
+function deleteReadingList(comic) {
+  const readingDB = require('../database/reading.database')
+  if (readingDB[comic.title]) {
+    delete readingDB[comic.title]
+    send({type: 'reading', data: readingDB}, 'update', 'r')
+  }
+}
+
 module.exports = {
   q: q,
   qi: qi,
@@ -194,5 +202,6 @@ module.exports = {
   getOrRemoveIssue: getOrRemoveIssue,
   sortIssues: sortIssues,
   writeRecent: writeRecent,
-  writeReadingList: writeReadingList
+  writeReadingList: writeReadingList,
+  deleteReadingList: deleteReadingList
 }
