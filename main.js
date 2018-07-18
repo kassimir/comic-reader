@@ -6,6 +6,7 @@ const ipc = require('electron').ipcMain
 const path = require('path')
 const url = require('url')
 const fs = require('fs')
+const request = require('request')
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
@@ -13,7 +14,7 @@ let mainWindow
 
 function createWindow () {
   // Create the browser window.
-  mainWindow = new BrowserWindow({x: 0, y: 0, width: 1200, height: 1000, autoHideMenuBar: true, titleBarStyle: 'hidden'})
+  mainWindow = new BrowserWindow({x: -7, y: 0, width: 1200, height: 1050, autoHideMenuBar: true, titleBarStyle: 'hidden'})
 
   // and load the index.html of the app.
   mainWindow.loadURL(url.format({
@@ -23,7 +24,7 @@ function createWindow () {
   }))
 
   // Open the DevTools.
-  // mainWindow.webContents.openDevTools()
+  mainWindow.webContents.openDevTools()
 
   // Emitted when the window is closed.
   mainWindow.on('closed', function () {
@@ -59,4 +60,27 @@ app.on('activate', function () {
 ipc.on('update', (e, a) => {
   if (a.type === 'recent') fs.writeFileSync('./database/recent.database.json', JSON.stringify(a.data))
   else if (a.type === 'reading') fs.writeFileSync('./database/reading.database.json', JSON.stringify((a.data)))
+})
+
+ipc.on('download', (e, a) => {
+  const { comic, images, data } = a
+  if (!fs.existsSync('downloads')) fs.mkdirSync('downloads')
+  if (!fs.existsSync(`downloads/${comic.title}`)) fs.mkdirSync(`downloads/${comic.title}`)
+  if (!fs.existsSync(`downloads/${comic.title}/${comic.issue}`)) fs.mkdirSync(`downloads/${comic.title}/${comic.issue}`)
+  const finishedArr = []
+  images.forEach( (i, ind) => {
+    const uri = i
+    const filename = `downloads/${comic.title}/${comic.issue}/${ind}.jpg`
+    const callback = () => {
+      finishedArr.push(true)
+      console.log(`finishedArr: ${finishedArr.length}`)
+      if (finishedArr.length === images.length) {
+        fs.writeFileSync('./database/downloaded.database.json', JSON.stringify(data))
+        console.log('finished!')
+      }
+    }
+    request.head(uri, function(err, res, body){
+      request(uri).pipe(fs.createWriteStream(filename)).on('close', callback);
+    });
+  })
 })

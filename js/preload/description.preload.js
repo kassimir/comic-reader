@@ -1,6 +1,6 @@
 const send = require('../utils').send
 
-window.onload = onload
+window.addEventListener('DOMContentLoaded', onload)
 
 
 // TODO: Add some level of asynchronousity to this to allow for

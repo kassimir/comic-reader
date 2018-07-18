@@ -83,11 +83,13 @@ function getOrRemoveIssue(txt, type) {
   if (split.length < 2) return txt
 
   function nameCheck(name) {
-    return ['Issue', 'Full', 'TPB', 'Special', '_Special', 'Annual', '_Annual', 'Yearbook'].filter( p => name.includes(p))
+    // Checks the common "Issue" names. Adding new ones whenever I find them
+    return ['Issue', 'Full', 'TPB', 'Special', '_Special', 'Annual', '_Annual', 'Yearbook', '_TPB'].filter( p => name.includes(p))
   }
 
   const last = split[split.length - 1]
   const secondLast = split[split.length - 2]
+
   // I haven't seen it, but if there is something titled Deadpool TPB Vol 2. This
   // will return 2 for the number and Vol 2 for the issue and Deadpool TPB for the
   // title, so something to watch out for, but until I find it, I'm not changing it. :)
@@ -98,7 +100,7 @@ function getOrRemoveIssue(txt, type) {
     // Same as if it has '#' in it
     if (!parseInt(last)) {
       // check if it is #[issue]
-      if (last[0] === '#' || nameCheck(secondLast)) return secondLast + ' ' + last
+      if (last[0] === '#' || nameCheck(secondLast).length) return secondLast + ' ' + last
       // if it isn't, then it's a word of some kind (Full, TPB, etc)
       return last
     } else {
@@ -174,7 +176,20 @@ function writeRecent(comic, link) {
     recentDB[comic.title].issues[comic.issue] = link
     recentDB[comic.title].date = new Date()
   }
-  send({type: 'recent', data: recentDB}, 'update', 'r')
+
+  if (Object.keys(recentDB).length > 30) {
+    const newCurrentList = {}
+    const sortedRecent = Object.keys(recentDB).sort( (a, b) => {
+      return new Date(recentDB[b].date) - new Date(recentDB[a].date)
+    }).splice(0, 30)
+
+    sortedRecent.forEach( c => {
+      newCurrentList[c] = recentDB[c]
+    })
+
+    send({type: 'recent', data: newCurrentList}, 'update', 'r')
+
+  } else send({type: 'recent', data: recentDB}, 'update', 'r')
 }
 
 function writeReadingList(comic) {
@@ -193,6 +208,24 @@ function deleteReadingList(comic) {
   }
 }
 
+function downloadComic(comic) {
+  const downloadedDB = require('../database/downloaded.database')
+  const imgs = q('#comic > div').children
+  const images = []
+
+  if (!downloadedDB[comic.title]) {
+    downloadedDB[comic.title] = {
+      issues: [{
+        issue: comic.issue,
+        length: imgs.length
+      }]
+    }
+  }
+
+  Array.from(imgs).forEach(i => images.push(i.src))
+  send({comic: comic, images: images, data: downloadedDB}, 'download', 'r')
+}
+
 module.exports = {
   q: q,
   qi: qi,
@@ -203,5 +236,6 @@ module.exports = {
   sortIssues: sortIssues,
   writeRecent: writeRecent,
   writeReadingList: writeReadingList,
-  deleteReadingList: deleteReadingList
+  deleteReadingList: deleteReadingList,
+  downloadComic: downloadComic
 }

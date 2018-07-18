@@ -1,18 +1,54 @@
-const Tile = require('./js/models/tile.model')
+console.log('online: ', navigator.onLine)
+
 const utils = require('./js/utils.js')
 const qi = utils.qi
 const q = utils.q
 const create = utils.create
-const getIssue = utils.getOrRemoveIssue
-const sortIssues = utils.sortIssues
-const writeRecent = utils.writeRecent
-const writeReadingList = utils.writeReadingList
-const deleteReadingList = utils.deleteReadingList
+const Tile = require('./js/models/tile.model')
 
 // Hidden div for rendering pages in the background
 const hidden = qi('hidden')
 // Reader div for actually displaying data
 const reader = qi('reader')
+
+if (!navigator.onLine) {
+  // Go to download mode
+  q('.section-title').forEach( i => i.style.display = 'none')
+  q('.carousel-outer').forEach( i => i.style.display = 'none')
+  q('.downloaded').forEach(i => i.style.display = 'block')
+  const downloadDB = require(`./database/downloaded.database`)
+  Object.keys(downloadDB).forEach( key => {
+    buildTile(new Tile(key, `downloads/${key}/cover.jpg`, null), `downloaded`)
+  })
+} else {
+  loader('start', true)
+  window.onload = mainRender
+}
+
+
+/*
+
+      <p class="section-title downloaded">DOWNLOADED COMICS</p>
+      <div class="carousel-outer downloaded" id="downloadedlist">
+        <div class="carousel-inner downloaded"></div>
+      </div>
+      <div class="section-desc downloaded" id="downloaded-desc"></div>
+
+      <p class="section-title">READING LIST</p>
+      <div class="carousel-outer" id="readinglist">
+        <div class="carousel-inner"></div>
+      </div>
+      <div class="section-desc" id="readinglist-desc"></div>
+
+
+ */
+
+const getIssue = utils.getOrRemoveIssue
+const sortIssues = utils.sortIssues
+const writeRecent = utils.writeRecent
+const writeReadingList = utils.writeReadingList
+const deleteReadingList = utils.deleteReadingList
+const downloadComic = utils.downloadComic
 // This is the object from which the main page will be built
 const frontPage = {
   latest: {},
@@ -52,8 +88,6 @@ function loadCommit() {
       if (modal && modal.innerHTML) modal.click()
     } else clearInterval(iframeTO)}, 2000)
 }
-
-loader('start', true)
 
 // TODO: Fix the search for only one result. If there's only one result
 // TODO: the website takes you to the actual comic, which throws off my code.
@@ -109,8 +143,8 @@ function search(){
 // STEP ONE:
 // Navigate to the site, then steal its front page
 function mainRender() {
-  // Hide the Home button, if it is showing
-  if (qi('home').style.visibility === 'visible') rebuild()
+  // Hide the Home and download button, if it is showing
+  if (qi('home-download').style.visibility === 'visible') rebuild()
 
   function ipcMessage(e) {
     switch(e.channel) {
@@ -122,7 +156,7 @@ function mainRender() {
       case 'tab-mostview': buildTile(new Tile(e.args[0].title, e.args[0].img, e.args[0].link), e.channel); break
       case 'latest': buildTile(new Tile(e.args[0].title, e.args[0].img, e.args[0].link), e.channel); break
       case 'end': clearHidden(); break
-      default: console.log(e);
+      default: console.log(e.args[0]);
     }
   }
 
@@ -157,7 +191,7 @@ function mainRender() {
 
   function rebuild() {
     loader('start', true)
-    qi('home').style.visibility = 'hidden'
+    qi('home-download').style.visibility = 'hidden'
     document.body.removeChild(qi('comic'))
     q('#recent .carousel-inner').innerHTML = ''
     q('#readinglist .carousel-inner').innerHTML = ''
@@ -184,14 +218,13 @@ function mainRender() {
   }
 }
 
-window.onload = mainRender
 
 function buildTile(tile, section, first) {
   const sect = section.replace(/(tab|-)/g,'')
   const comicDiv = qi(`${sect}`).querySelector('.carousel-inner')
 
   const container = create('div', {style: {display: 'flex', 'flex-direction': 'column'}}, {'click': onclick})
-  const img = create('img', {'data-link': tile.link, 'data-section': sect, class: 'link', src: tile.img, style: {width: '20vw', margin: '0 2.25vw'}})
+  const img = create('img', {'data-link': tile.link, 'data-section': sect, class: 'link', src: tile.img, style: {width: '20vw', margin: '0 2.25vw'}}, {'error': onerr})
   const title = create('span', {'data-link': tile.link, 'data-section': sect, class: 'link', innerText: tile.title, style: {color: 'white', margin: '7px'}})
   if (section === 'recent') container.id = tile.title.replace(/[\s()]/g, '')
 
@@ -206,16 +239,29 @@ function buildTile(tile, section, first) {
   function onclick() {
     navigation('description', {link: tile.link, section: sect, cover: tile.img})
   }
+
+  // The page will often send 503 errors for the images, so
+  // this will keep trying to load it until it doesn't error
+  // Obviously, there's no failsafe here, so if there's a
+  // legitimate error (like a 404), it will try into oblivion
+  // TODO: Set a default image after x amount of tries
+  function onerr(e) {
+    setTimeout(()=>e.target.src = e.target.currentSrc, 2000)
+  }
 }
 
 // This is the function to "navigate" between pages
 // in the render div
 // e: link, section, cover
 function navigation(page, e) {
-  //TODO: This function is pretty huge. Make it smaller.
-
   // Shows the descriptiong of the selected comic
   if (page === 'description') {
+
+    // TODO: Fix this! The Toggle is bad, and the overall code is bad
+    // TODO: Need to put description and issues in their own function,
+    // TODO: build the elements, and then just show/hide them with the
+    // TODO: toggle, instead of building them on-demand. It's gross.
+
     loader('start')
 
     const descId = `${e.section}-desc`
@@ -239,11 +285,6 @@ function navigation(page, e) {
       const descArgs = e.args[0].desc
       comicTitle = descArgs.title
       if (!comicCover) comicCover = descArgs.cover
-      // I contemplated just writing everything with .innerHTML, simply because
-      // there are so many elements being made, but after a lot of research, it
-      // is supposed to be faster this way, so I chose it. I may update these to
-      // not have inline styles. But it's hard not to utilize the amazing functionality
-      // of my create function. :P
 
       // titleHeader is the title header. It contains the title of the comic,
       // the "Go to Comic" and "Add to Reading List", and the close button
@@ -379,8 +420,8 @@ function navigation(page, e) {
   } else if (page === 'comic') {
     loader('start', true)
     // Save to Recently Read database
-    // Set up Home button
-    qi('home').style.visibility = 'visible'
+    // Set up Home and download button
+    qi('home-download').style.visibility = 'visible'
 
     const baseLink = currentComic.link
     const comicLink = e.link
@@ -418,15 +459,25 @@ function navigation(page, e) {
       qi('title').textContent = currentComic.title
       const issueSelect = qi('issue-select')
       const nav = e.args[0].nav
+      issueSelect.innerHTML = ''
       nav.issues.forEach( opt => {
-        const option = create('option', {value: `${baseLink}/${opt.val}`, textContent: opt.txt})
+        const option = create('option', {value: `${baseLink}/${opt.val}`, textContent: opt.txt, 'data-issue': opt.txt})
         if (opt.txt === currentComic.issue) option.selected = 'selected'
         issueSelect.add(option)
       })
       issueSelect.style.display = 'block'
 
-      nextIssue = nav.next
-      previousIssue = nav.prev
+      if (!nav.next) qi('nextButton').style.visibility = 'hidden'
+      else {
+        qi('nextButton').style.visibility = 'visible'
+        nextIssue = nav.next
+      }
+
+      if (!nav.prev) qi('prevButton').style.visibility = 'hidden'
+      else {
+        qi('prevButton').style.visibility = 'visible'
+        previousIssue = nav.prev
+      }
     }
 
     bgRender(e.link + '&readType=1', './js/preload/comic.preload.js', {'ipc-message': ipcMessage})
@@ -437,13 +488,20 @@ function goNextIssue() {navigation('comic', {link: nextIssue})}
 function goPrevIssue() {navigation('comic', {link: previousIssue})}
 function goToIssue(e) {navigation('comic', {link: e.target.value})}
 
-function bgRender(src, preload, listeners) {
+function download() {
+  const downloadDB = require('./database/downloaded.database')
+  if (downloadDB[currentComic.title] && downloadDB[currentComic.title][currentComic.issue]) return
+  downloadComic(currentComic)
+}
+
+function bgRender(src, preload, listeners, dev) {
   // There should never be two hidden webviews
   if (qi('hidden').querySelector('webview')) return
   loaded = false
   if (!listeners['load-commit']) listeners['load-commit'] = loadCommit
   const backgroundWebview = create('webview', {src: src, preload: preload}, listeners)
   hidden.appendChild(backgroundWebview)
+  if (dev) backgroundWebview.addEventListener('dom-ready', () => backgroundWebview.openDevTools())
 }
 
 // I kept forgetting to do this, so I just made a function for it

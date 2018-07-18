@@ -1,6 +1,6 @@
 const send = require('../utils').send
 
-window.onload = onload
+window.addEventListener('DOMContentLoaded', onload)
 
 function onload() {
   const searchResults = document.querySelectorAll('.listing tbody')[0]

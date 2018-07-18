@@ -9,7 +9,10 @@
   <body>
     <div id="hidden"></div>
     <div id="nav">
-      <i class="fas fa-home fa-2x" id="home" onclick="mainRender()"></i>
+      <div id="home-download">
+        <i class="fas fa-home fa-2x" id="home" onclick="mainRender()"></i>
+        <i class="fas fa-download fa-2x" id="download" onclick="download()"></i>
+      </div>
       <div id="title"></div>
       <div id="search">
         <form action="javascript:void(0);" onsubmit="search()">
@@ -27,50 +30,56 @@
       <div id="search-results"></div>
       <div id="search-desc" style="margin-top: 20px;"></div>
 
+      <p class="section-title downloaded">DOWNLOADED COMICS</p>
+      <div class="carousel-outer downloaded" id="downloaded">
+        <div class="carousel-inner downloaded"></div>
+      </div>
+      <div class="section-desc downloaded" id="downloaded-desc"></div>
+
+      <p class="section-title">READING LIST</p>
       <div class="carousel-outer" id="readinglist">
-        <p class="section-title">READING LIST</p>
         <div class="carousel-inner"></div>
       </div>
       <div class="section-desc" id="readinglist-desc"></div>
 
+      <p class="section-title">MOST RECENTLY READ</p>
       <div class="carousel-outer" id="recent">
-        <p class="section-title">MOST RECENTLY READ</p>
         <div class="carousel-inner"></div>
       </div>
       <div class="section-desc" id="recent-desc"></div>
 
+      <p class="section-title">MOST RECENTLY UPDATED</p>
       <div class="carousel-outer" id="latest">
-        <p class="section-title">MOST RECENTLY UPDATED</p>
         <div class="carousel-inner"></div>
       </div>
       <div class="section-desc" id="latest-desc"></div>
 
+      <p class="section-title">MOST RECENTLY ADDED</p>
       <div class="carousel-outer" id="newest">
-        <p class="section-title">MOST RECENTLY ADDED</p>
         <div class="carousel-inner"></div>
       </div>
       <div class="section-desc" id="newest-desc"></div>
 
+      <p class="section-title">TOP TODAY</p>
       <div class="carousel-outer" id="topday">
-        <p class="section-title">TOP TODAY</p>
         <div class="carousel-inner"></div>
       </div>
       <div class="section-desc" id="topday-desc"></div>
 
+      <p class="section-title">TOP WEEK</p>
       <div class="carousel-outer" id="topweek">
-        <p class="section-title">TOP WEEK</p>
         <div class="carousel-inner"></div>
       </div>
       <div class="section-desc" id="topweek-desc"></div>
 
+      <p class="section-title">TOP MONTH</p>
       <div class="carousel-outer" id="topmonth">
-        <p class="section-title">TOP MONTH</p>
         <div class="carousel-inner"></div>
       </div>
       <div class="section-desc" id="topmonth-desc"></div>
 
+      <p class="section-title">TOP OF ALL TIME</p>
       <div class="carousel-outer" id="mostview">
-        <p class="section-title">TOP OF ALL TIME</p>
         <div class="carousel-inner"></div>
       </div>
       <div class="section-desc" id="mostview-desc"></div>
