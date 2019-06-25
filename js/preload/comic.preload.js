@@ -2,7 +2,6 @@ const send = require('../utils').send
 const q = require('../utils').q
 
 window.addEventListener('DOMContentLoaded', onload)
-// window.addEventListener('loaded', onload)
 
 function onload() {
 
@@ -55,7 +54,7 @@ function onload() {
         recurse = true
         return
       }
-      if (i.src.includes('readcomiconline.to')) return
+      if (i.src.includes('readcomiconline.to') || i.style.width === '100%') return
       imgUrls.push(i.src)
     })
 

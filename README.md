@@ -13,5 +13,5 @@ List of things to complete (in no particular order):
 4) ~~Reading List~~
 5) Error handling for things like no internet or for the preloads not returning anything in a timely fashion
 6) ~~Build tiles as messages come in instead of building an object and iterating over it~~
-7) Fix the Description / Issues. It's hacky, and I don't like it
+7) ~~Fix the Description / Issues. It's hacky, and I don't like it~~
 8) ~~Add loading screen~~

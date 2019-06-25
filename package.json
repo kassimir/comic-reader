@@ -4,11 +4,15 @@
   "description": "An application for reading comics",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "package": "electron-builder dir"
   },
+  "postinstall": "electron-builder install-app-deps",
   "repository": "https://github.com/kassimir/comic-reader",
   "author": "kassimir",
   "devDependencies": {
-    "electron": "^1.8.4"
+    "electron": "^1.8.4",
+    "electron-builder": "^20.44.4",
+    "request": "^2.88.0"
   }
 }

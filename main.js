@@ -14,7 +14,15 @@ let mainWindow
 
 function createWindow () {
   // Create the browser window.
-  mainWindow = new BrowserWindow({x: -7, y: 0, width: 1200, height: 1050, autoHideMenuBar: true, titleBarStyle: 'hidden'})
+  mainWindow = new BrowserWindow({
+    x: -7,
+    y: 0,
+    width: 1200,
+    height: 1050,
+    autoHideMenuBar: true,
+    titleBarStyle: 'hidden',
+    icon: path.join(__dirname, 'favicon.ico')
+  })
 
   // and load the index.html of the app.
   mainWindow.loadURL(url.format({
@@ -23,8 +31,18 @@ function createWindow () {
     slashes: true
   }))
 
+  mainWindow.webContents.executeJavaScript(`
+    var path = require('path');
+    module.paths.push(path.resolve('node_modules'));
+    module.paths.push(path.resolve('../node_modules'));
+    module.paths.push(path.resolve(__dirname, '..', '..', 'electron', 'node_modules'));
+    module.paths.push(path.resolve(__dirname, '..', '..', 'electron.asar', 'node_modules'));
+    module.paths.push(path.resolve(__dirname, '..', '..', 'app', 'node_modules'));
+    module.paths.push(path.resolve(__dirname, '..', '..', 'app.asar', 'node_modules'));
+    path = undefined;
+  `);
   // Open the DevTools.
-  mainWindow.webContents.openDevTools()
+  // mainWindow.webContents.openDevTools()
 
   // Emitted when the window is closed.
   mainWindow.on('closed', function () {
@@ -32,6 +50,7 @@ function createWindow () {
     // in an array if your app supports multi windows, this is the time
     // when you should delete the corresponding element.
     mainWindow = null
+    app.quit()
   })
 }
 
