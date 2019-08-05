@@ -54,7 +54,7 @@ function onload() {
         recurse = true
         return
       }
-      if (i.src.includes('readcomiconline.to') || i.style.width === '100%') return
+      if (!i.src.includes('blogspot')) return
       imgUrls.push(i.src)
     })
 

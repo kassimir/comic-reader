@@ -83,20 +83,18 @@ ipc.on('update', (e, a) => {
 
 ipc.on('download', (e, a) => {
   const { comic, images, data } = a
-  if (!fs.existsSync('downloads')) fs.mkdirSync('downloads')
-  if (!fs.existsSync(`downloads/${comic.title}`)) fs.mkdirSync(`downloads/${comic.title}`)
-  if (!fs.existsSync(`downloads/${comic.title}/${comic.issue}`)) fs.mkdirSync(`downloads/${comic.title}/${comic.issue}`)
+
+  if (!fs.existsSync('downloads')) fs.mkdirSync('./downloads')
+  if (!fs.existsSync(`downloads/${comic.title}`)) fs.mkdirSync(`./downloads/${comic.title}`)
+  if (!fs.existsSync(`downloads/${comic.title}/${comic.issue}`)) fs.mkdirSync(`./downloads/${comic.title}/${comic.issue}`)
   const finishedArr = []
   images.forEach( (i, ind) => {
     const uri = i
     const filename = `downloads/${comic.title}/${comic.issue}/${ind}.jpg`
     const callback = () => {
       finishedArr.push(true)
-      console.log(`finishedArr: ${finishedArr.length}`)
-      if (finishedArr.length === images.length) {
-        fs.writeFileSync('./database/downloaded.database.json', JSON.stringify(data))
-        console.log('finished!')
-      }
+      if (finishedArr.length === images.length) fs.writeFileSync('./database/downloaded.database.json', JSON.stringify(data))
+      e.sender.send('download', 'finished')
     }
     request.head(uri, function(err, res, body){
       request(uri).pipe(fs.createWriteStream(filename)).on('close', callback);

@@ -1,5 +1,6 @@
 const ipcRender = require('electron').ipcRenderer
 const ipcMain = require('electron').ipcMain
+const fs = require('fs')
 
 /*
   I don't want to use jQuery, but I also hate writing document.querySelector[All](element)
@@ -7,7 +8,7 @@ const ipcMain = require('electron').ipcMain
  */
 
 const q = ele => document.querySelectorAll(ele).length > 1 ? document.querySelectorAll(ele) : document.querySelector(ele)
-const qi = (id) => document.getElementById(id)
+const qi = id => document.getElementById(id)
 const qc = cls => document.getElementsByClassName(cls)
 
 /*
@@ -61,9 +62,9 @@ const create = (ele, attrs, listeners) => {
          'h' for ipcRender.sendToHost or
          else ipcMain.send()
  */
-const send = (msg, channel = 'default', type = 'h') => {
+const send = (msg = '', channel = 'default', type = 'h', sync = false) => {
   if (type === 'h') ipcRender.sendToHost(channel, msg)
-  else if (type === 'r') ipcRender.send(channel, msg)
+  else if (type === 'r' && !sync) ipcRender.send(channel, msg)
   else ipcMain.send(channel, msg)
 }
 
@@ -169,7 +170,7 @@ function sortIssues(arr) {
 // Writes to "database"
 // TODO: utilize a model
 function writeRecent(comic, link) {
-  const recentDB = require('../database/recent.database')
+  const recentDB = JSON.parse(fs.readFileSync('./database/recent.database.json').toString())
   if (!recentDB[comic.title]) {
     recentDB[comic.title] = {date: new Date(), link: comic.link, cover: comic.cover, issues: {[comic.issue] : link}}
   } else {
@@ -193,7 +194,7 @@ function writeRecent(comic, link) {
 }
 
 function writeReadingList(comic) {
-  const readingDB = require('../database/reading.database')
+  const readingDB = JSON.parse(fs.readFileSync('./database/reading.database.json').toString())
   if (!readingDB[comic.title]) {
     readingDB[comic.title] = {date: new Date(), link: comic.link, cover: comic.cover}
     send({type: 'reading', data: readingDB}, 'update', 'r')
@@ -201,7 +202,7 @@ function writeReadingList(comic) {
 }
 
 function deleteReadingList(comic) {
-  const readingDB = require('../database/reading.database')
+  const readingDB = JSON.parse(fs.readFileSync('./database/reading.database.json').toString())
   if (readingDB[comic.title]) {
     delete readingDB[comic.title]
     send({type: 'reading', data: readingDB}, 'update', 'r')
@@ -209,7 +210,7 @@ function deleteReadingList(comic) {
 }
 
 function downloadComic(comic) {
-  const downloadedDB = require('../database/downloaded.database')
+  const downloadedDB = JSON.parse(fs.readFileSync('./database/downloaded.database.json').toString())
   const imgs = q('#comic > div').children
   const images = []
 

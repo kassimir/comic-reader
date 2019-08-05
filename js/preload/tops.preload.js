@@ -14,19 +14,6 @@ const loaded = {
 }
 
 function onload() {
-  // Start a 20-second timeout for page load, so it's not stuck at loading screen
-  setTimeout(() => {
-    console.log('begin timeout')
-    let err = false
-    for (let key in loaded) {
-      if (!loaded[key]) {
-        err = true
-      }
-    }
-    console.log('end timeout')
-    if (err) send('error', 'error')
-  }, 20000)
-
   // Keeps all the data scraping asynchronous and allows
   // to know when it's completed without using counters
   Promise.all([
