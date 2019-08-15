@@ -76,11 +76,6 @@ app.on('activate', function () {
   }
 })
 
-ipc.on('update', (e, a) => {
-  if (a.type === 'recent') fs.writeFileSync('./database/recent.database.json', JSON.stringify(a.data))
-  else if (a.type === 'reading') fs.writeFileSync('./database/reading.database.json', JSON.stringify((a.data)))
-})
-
 ipc.on('download', (e, a) => {
   const { comic, images, data } = a
 

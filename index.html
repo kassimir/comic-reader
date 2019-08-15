@@ -36,49 +36,81 @@
       </div>
       <div class="section-desc downloaded" id="downloaded-desc"></div>
 
-      <p class="section-title" id="reading-text">READING LIST</p>
-      <div class="carousel-outer" id="readinglist">
+      <div class="addGroup">
+        <div class="addGroup-icons" onclick="showAddGroup()">
+          <i class="fas fa-plus"></i>
+          <p class="addGroup-icons_p">Add Group</p>
+        </div>
+        <div class="addGroup-groupName">
+          <div class="addGroup-groupName_container">
+            <input type="text" placeholder="Group Name" id="group-name" onkeydown="mdInput(event)">
+            <button id="groupButton" onclick="addGroup()">Create</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title" id="reading-text"><p>READING LIST</p>
+        <div class="menu-icons-container" onclick="titleMenuToggle('reading-text')" id="reading-text_menu">
+          <div class="menu-icons"></div>
+          <div class="menu-icons"></div>
+          <div class="menu-icons"></div>
+        </div>
+        <div class="title-menu_container" id="reading-title-menu">
+          <div class="title-menu">
+            <i class="fas fa-arrows-alt-h" title="reverse order" onclick="changeSort('reading')"></i>
+            <i class="fas fa-arrows-alt" title="change order" onclick="arrangeComics('reading', this)"></i>
+            <!--<i class="fas fa-trash-alt" title="delete group" onclick="deleteGroupClick('reading')"></i>-->
+            <!--<div class="delete-menu">-->
+              <!--<p>Are you sure?</p>-->
+              <!--<span style="color: #920223; margin-left: 5px;">Yes</span>-->
+              <!--<span style="margin-left: 2px;">/</span>-->
+              <!--<span style="margin-left: 2px;" onclick="deleteGroupClick('reading')">No</span>-->
+            <!--</div>-->
+          </div>
+        </div>
+      </div>
+      <div class="carousel-outer" id="reading">
         <div class="carousel-inner"></div>
       </div>
-      <div class="section-desc" id="readinglist-desc"></div>
+      <div class="section-desc" id="reading-desc"></div>
 
-      <p class="section-title" id="recent-text">MOST RECENTLY READ</p>
+      <div class="section-title" id="recent-text"><p>MOST RECENTLY READ</p></div>
       <div class="carousel-outer" id="recent">
         <div class="carousel-inner"></div>
       </div>
       <div class="section-desc" id="recent-desc"></div>
 
-      <p class="section-title">MOST RECENTLY UPDATED</p>
+      <div class="section-title" id="latest-text"><p>MOST RECENTLY UPDATED</p></div>
       <div class="carousel-outer" id="latest">
         <div class="carousel-inner"></div>
       </div>
       <div class="section-desc" id="latest-desc"></div>
 
-      <p class="section-title">MOST RECENTLY ADDED</p>
+      <div class="section-title" id="newest-text"><p>MOST RECENTLY ADDED</p></div>
       <div class="carousel-outer" id="newest">
         <div class="carousel-inner"></div>
       </div>
       <div class="section-desc" id="newest-desc"></div>
 
-      <p class="section-title">TOP TODAY</p>
+      <div class="section-title" id="topday-text"><p>TOP TODAY</p></div>
       <div class="carousel-outer" id="topday">
         <div class="carousel-inner"></div>
       </div>
       <div class="section-desc" id="topday-desc"></div>
 
-      <p class="section-title">TOP WEEK</p>
+      <div class="section-title" id="topweek-text"><p>TOP WEEK</p></div>
       <div class="carousel-outer" id="topweek">
         <div class="carousel-inner"></div>
       </div>
       <div class="section-desc" id="topweek-desc"></div>
 
-      <p class="section-title">TOP MONTH</p>
+      <div class="section-title" id="topmonth-text"><p>TOP MONTH</p></div>
       <div class="carousel-outer" id="topmonth">
         <div class="carousel-inner"></div>
       </div>
       <div class="section-desc" id="topmonth-desc"></div>
 
-      <p class="section-title">TOP OF ALL TIME</p>
+      <div class="section-title" id="mostview-text"><p>TOP OF ALL TIME</p></div>
       <div class="carousel-outer" id="mostview">
         <div class="carousel-inner"></div>
       </div>

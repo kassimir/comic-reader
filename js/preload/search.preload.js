@@ -4,9 +4,9 @@ window.addEventListener('DOMContentLoaded', onload)
 
 function onload() {
   const searchResults = document.querySelectorAll('.listing tbody')[0]
-
   if (!searchResults || !searchResults.innerHTML) {
-    setTimeout(onload, 1000)
+    if (document.querySelector('.barContent').innerText.trim() !== 'Not found') setTimeout(onload, 1000)
+    else send('', 'nf')
     return
   }
 

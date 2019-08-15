@@ -1,5 +1,14 @@
 #hidden { visibility: hidden; }
 
+i:hover {
+    color: #920223;
+    cursor: pointer;
+}
+
+form {
+    display: flex;
+}
+
 #nav {
     position: absolute;
     top: 0;
@@ -54,7 +63,7 @@
 }
 
 #search-results {
-    border-bottom: #5E051D;
+    border-bottom: #5E051D 2px solid;
 }
 
 .search-table {
@@ -91,7 +100,154 @@
 .fa-download {
     margin-left: 7px;
     cursor: pointer;
+    overflow: hidden;
 }
+
+.title-menu_container {
+    width: 220px;
+    overflow: hidden;
+}
+
+.title-menu {
+    padding-left: 5px;
+    width: 220px;
+    transform: translateX(-100px);
+    transition: transform 1s;
+}
+
+.fa-arrows-alt, .fa-arrows-alt-h {
+    margin-left: 5px;
+    transition: transform 1s;
+    cursor: pointer;
+}
+
+.addGroup {
+    margin-left: 25px;
+    overflow: hidden;
+}
+
+.addGroup-icons {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    cursor: pointer;
+    width: 95px;
+    line-height: 0;
+}
+
+#group-name {
+    border: 1px solid red;
+    background-color: black;
+    color: white;
+    outline: none;
+    padding-left: 5px;
+}
+
+#groupButton {
+    background: linear-gradient(to bottom, #e90335 0%,#c60229 44%,#920223 100%);
+    border: none;
+}
+
+.addGroup-icons:hover, .addGroup-icons:hover > p {
+    color: #920223;
+}
+
+.addGroup-icons .fa-plus {
+    transition: transform 1s;
+}
+
+.addGroup-icons_p {
+    margin-left: 5px;
+    color: white;
+}
+
+.addGroup-groupName {
+    width: 235px;
+    overflow: hidden;
+}
+
+.addGroup-groupName_container {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    width: 235px;
+    transform: translateY(-25px);
+    transition: transform 1s;
+}
+
+.menu-icons-container {
+    margin-left: 5px;
+    cursor: pointer;
+}
+
+.menu-icons-container:hover > div {
+    background-color: #920223;
+}
+
+.menu-icons {
+    width: 15px;
+    background-color: white;
+    height: 2px;
+    margin: 2px;
+    cursor: pointer;
+}
+
+.menu-icons:hover {
+    color: #920223;
+}
+
+.fa-trash-alt {
+    color: #920223;
+    margin-left: 5px;
+}
+
+.fa-trash-alt:hover {
+    color: white;
+}
+
+.delete-menu {
+    display: none;
+    flex-direction: row;
+    align-items: center;
+    font-size: 60%;
+    line-height: 0;
+}
+
+.fa-arrows-alt,
+  .fa-arrows-alt-h,
+  .fa-trash-alt {
+    cursor: pointer;
+}
+
+.fa-arrow-circle-left, .fa-arrow-circle-right {
+    transition: transform 1s;
+    transform: translateY(-20px);
+}
+
+.bar-animate_top_open {
+    animation: topAnimate_open 1s forwards;
+}
+
+.bar-animate_top_close {
+    animation: topAnimate_close 1s forwards;
+}
+
+.bar-animate_middle_open {
+    animation: midAnimate_open 1s forwards;
+}
+
+.bar-animate_middle_close {
+    animation: midAnimate_close 1s forwards;
+}
+
+.bar-animate_bot_open {
+    animation: bottomAnimate_open 1s forwards;
+}
+
+.bar-animate_bot_close {
+    animation: bottomAnimate_close 1s forwards;
+}
+
 
 .reader-view {
     position: absolute;
@@ -109,6 +265,7 @@
 .link:hover, .link-read:hover {
     text-decoration: underline;
     cursor: pointer;
+    color: white;
 }
 
 .link-read {
@@ -134,6 +291,13 @@
     font-size: 2vh;
     font-weight: bold;
     margin: 15px 0 0 2vw;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.section-title.downloaded {
+    display: none;
 }
 
 .section-desc {
@@ -176,7 +340,7 @@
     margin: 3px;
 }
 
-.issue-container {
+.issue-container, .group-container {
     padding: 12px;
     column-count: 3;
     color: white;
@@ -184,7 +348,11 @@
     text-align: center;
 }
 
-.issue-container span {
+/*.group-container {*/
+    /*display: none;*/
+/*}*/
+
+.issue-container span, .group-container span {
     display: block;
 }
 
@@ -203,6 +371,38 @@
 
 .loader span {
     color: #920223;
+}
+
+/*ANIMATIONS*/
+
+@keyframes topAnimate_open {
+    from { margin-bottom: 2px; transform: rotate(0deg); }
+    to { margin-bottom: -4px; transform: rotate(45deg); }
+}
+
+@keyframes topAnimate_close {
+    from { margin-bottom: -4px; transform: rotate(45deg); }
+    to { margin-bottom: 2px; transform: rotate(0deg); }
+}
+
+@keyframes midAnimate_open {
+    from { height: 2px; }
+    to { height: 0; }
+}
+
+@keyframes midAnimate_close {
+    from { height: 0; }
+    to { height: 2px; }
+}
+
+@keyframes bottomAnimate_open {
+    from { margin-top: 2px; transform: rotate(0deg); }
+    to { margin-top: -2px; transform: rotate(-45deg); }
+}
+
+@keyframes bottomAnimate_close {
+    from { margin-top: -2px; transform: rotate(-45deg); }
+    to { margin-top: 2px; transform: rotate(0deg); }
 }
 
 /*SCROLL BAR*/
