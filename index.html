@@ -8,10 +8,27 @@
   </head>
   <body>
     <div id="hidden"></div>
+    <div id="lists">
+      <div id="list-create" style="margin-left: 12px;">
+        <div id="list-create_title" style="">
+          <i id="list-plus" class="fas fa-plus" style="margin-right: 5px; transition: transform 1s;"></i>
+          <p onclick="showListInput()">Create New List</p>
+        </div>
+        <div style="overflow: hidden; height: 25px;">
+          <div id="newListDiv" style="transform: translateY(-26px); transition: transform 1s;">
+            <input type="text" placeholder="List Name" id="list-name" onkeydown="submitInput(event, createList)">
+            <button id="listButton" onclick="createList()">Create</button>
+          </div>
+        </div>
+      </div>
+      <div id="listlist" style="padding: 12px; display: flex; flex-direction: column;"></div>
+      <div id="issuelist" style="padding: 12px; display: none; flex-direction: column"></div>
+    </div>
     <div id="nav">
       <div id="home-download">
         <i class="fas fa-home fa-2x" id="home" onclick="mainRender()"></i>
         <i class="fas fa-download fa-2x" id="download" onclick="download()"></i>
+        <i class="fas fa-list fa-2x" id="list" onclick="showLists()"></i>
       </div>
       <div id="title"></div>
       <div id="search">
@@ -37,18 +54,23 @@
       <div class="section-desc downloaded" id="downloaded-desc"></div>
 
       <div class="addGroup">
-        <div class="addGroup-icons" onclick="showAddGroup()">
-          <i class="fas fa-plus"></i>
-          <p class="addGroup-icons_p">Add Group</p>
+        <div class="addGroup-icons">
+          <div style="width: 95px; display: inherit; align-items: center;" onclick="showAddGroup()">
+            <i class="fas fa-plus"></i>
+            <p class="addGroup-icons_p">Add Group</p>
+          </div>
+          <div style="width: 95px; display: inherit; align-items: center;" onclick="showLists()">
+            <i class="fas fa-list"></i>
+            <p class="addGroup-icons_p">Show Lists</p>
+          </div>
         </div>
         <div class="addGroup-groupName">
           <div class="addGroup-groupName_container">
-            <input type="text" placeholder="Group Name" id="group-name" onkeydown="mdInput(event)">
+            <input type="text" placeholder="Group Name" id="group-name" onkeydown="submitInput(event, addGroup)">
             <button id="groupButton" onclick="addGroup()">Create</button>
           </div>
         </div>
       </div>
-
       <div class="section-title" id="reading-text"><p>READING LIST</p>
         <div class="menu-icons-container" onclick="titleMenuToggle('reading-text')" id="reading-text_menu">
           <div class="menu-icons"></div>
@@ -59,13 +81,6 @@
           <div class="title-menu">
             <i class="fas fa-arrows-alt-h" title="reverse order" onclick="changeSort('reading')"></i>
             <i class="fas fa-arrows-alt" title="change order" onclick="arrangeComics('reading', this)"></i>
-            <!--<i class="fas fa-trash-alt" title="delete group" onclick="deleteGroupClick('reading')"></i>-->
-            <!--<div class="delete-menu">-->
-              <!--<p>Are you sure?</p>-->
-              <!--<span style="color: #920223; margin-left: 5px;">Yes</span>-->
-              <!--<span style="margin-left: 2px;">/</span>-->
-              <!--<span style="margin-left: 2px;" onclick="deleteGroupClick('reading')">No</span>-->
-            <!--</div>-->
           </div>
         </div>
       </div>

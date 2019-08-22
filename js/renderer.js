@@ -1,23 +1,33 @@
-const utils = require('./js/utils.js')
+const utils = require('./js/utils')
+const api = require('./js/api')
 const {
   qi,
   q,
   qc,
   create,
-  readDB,
-  rewriteDB,
-  getGroups,
-  createGroup,
-  deleteGroupDB,
+  getOrRemoveIssue: getIssue,
   sortIssues,
-  writeRecent,
+  appendChildren
+} = utils
+const {
+  getDB,
+  readDB,
   writeToDB,
+  rewriteDB,
   updateDB,
   deleteFromDB,
+  createGroup,
+  deleteGroupDB,
+  createIssueList,
+  addIssuesToListDB,
+  moveListIssues,
+  deleteListIssue,
+  deleteListFromDB,
+  writeRecent,
   downloadComic
-} = utils
-const getIssue = utils.getOrRemoveIssue
-const Tile = require('./js/models/tile.model')
+} = api
+const TILE = require('./js/models/tile.model')
+const COMIC = require('./js/models/comic.model')
 const fs = require('fs')
 const ipc = require('electron').ipcRenderer
 
@@ -35,7 +45,7 @@ if (!navigator.onLine) {
   q('.downloaded').forEach(i => i.style.display = 'flex')
   const downloadedDB = JSON.parse(fs.readFileSync('./database/downloaded.database.json').toString())
   Object.keys(downloadedDB).forEach(key => {
-    buildTile(new Tile(key, `downloads/${key}/cover.jpg`, null), `downloaded`)
+    buildTile(new TILE(key, `downloads/${key}/cover.jpg`, null), `downloaded`)
   })
 } else {
   loader('start', true)
@@ -60,11 +70,14 @@ const currentComic = {
   issue: ''
 }
 
+let comicTitle
 
 // After creating groups, it was going to become very expensive to
 // check every issue for being in a group, so I'm creating an array
 // of issue titles instead and a correlating list of what group it's in.
-let GROUPS = getGroups(), GROUP_ISSUE_ARRAY = []
+let GROUPS = getDB('groups', {type: 'arr'}), GROUP_ISSUE_ARRAY = []
+
+let LISTS = getDB('lists', {type: 'arr'})
 
 // INSERTING SMALL PATCH FOR BACKWARDS COMPATIBILITY
 // After getting db's, check to see if they need date/position update
@@ -202,10 +215,8 @@ function search() {
       })
     })
 
-    titleDiv.appendChild(icon)
-    titleDiv.appendChild(titleSpan)
-    resultDiv.appendChild(titleDiv)
-    resultDiv.appendChild(issueSpan)
+    appendChildren(titleDiv, icon, titleSpan)
+    appendChildren(resultDiv, titleDiv, issueSpan)
     searchDiv.appendChild(resultDiv)
   }
 
@@ -221,6 +232,7 @@ function mainRender() {
 
   // Hide the Home and download button, if it is showing
   if (qi('home-download').style.visibility === 'visible') rebuild()
+  if (qi('lists').style.display === 'none') qi('lists').style.display = 'block'
 
   function ipcMessage(e) {
     switch (e.channel) {
@@ -228,22 +240,22 @@ function mainRender() {
         console.log(e.args[0]);
         break
       case 'tab-newest':
-        buildTile(new Tile(e.args[0].title, e.args[0].img, e.args[0].link), e.channel);
+        buildTile(new TILE(e.args[0].title, e.args[0].img, e.args[0].link), e.channel);
         break
       case 'tab-top-day':
-        buildTile(new Tile(e.args[0].title, e.args[0].img, e.args[0].link), e.channel);
+        buildTile(new TILE(e.args[0].title, e.args[0].img, e.args[0].link), e.channel);
         break
       case 'tab-top-week':
-        buildTile(new Tile(e.args[0].title, e.args[0].img, e.args[0].link), e.channel);
+        buildTile(new TILE(e.args[0].title, e.args[0].img, e.args[0].link), e.channel);
         break
       case 'tab-top-month':
-        buildTile(new Tile(e.args[0].title, e.args[0].img, e.args[0].link), e.channel);
+        buildTile(new TILE(e.args[0].title, e.args[0].img, e.args[0].link), e.channel);
         break
       case 'tab-mostview':
-        buildTile(new Tile(e.args[0].title, e.args[0].img, e.args[0].link), e.channel);
+        buildTile(new TILE(e.args[0].title, e.args[0].img, e.args[0].link), e.channel);
         break
       case 'latest':
-        buildTile(new Tile(e.args[0].title, e.args[0].img, e.args[0].link), e.channel);
+        buildTile(new TILE(e.args[0].title, e.args[0].img, e.args[0].link), e.channel);
         break
       case 'end':
         clearHidden();
@@ -265,7 +277,7 @@ function mainRender() {
 
     sortedRecent.forEach( c => {
       const comic = new Object(recentDB[c])
-      buildTile(new Tile(c, comic.cover, comic.link), 'recent')
+      buildTile(new TILE(c, comic.cover, comic.link), 'recent')
     })
   } else qi('recent-text').style.display = 'none'
 
@@ -282,7 +294,7 @@ function mainRender() {
     sortedReading.forEach( c => {
       const comic = readingDB[c]
       GROUP_ISSUE_ARRAY.push({title: c, db: 'reading'})
-      buildTile(new Tile(c, comic.cover, comic.link), 'reading', null, comic.position)
+      buildTile(new TILE(c, comic.cover, comic.link), 'reading', null, comic.position)
     })
   } else {
     qi('reading').style.display = 'none'
@@ -291,6 +303,9 @@ function mainRender() {
 
   // Build Groups
   buildGroups()
+
+  // Build Lists
+  buildLists()
 
   function rebuild() {
     loader('start', true)
@@ -325,7 +340,7 @@ function buildTile(tile, section, first, position = 0) {
   const sect = section.replace(/(tab|-)/g, '')
   const comicDiv = qi(`${sect}`).querySelector('.carousel-inner')
 
-  const container = create('div', {style: {display: 'flex', 'flex-direction': 'column'}, class: 'carousel-container', 'data-position': position})
+  const container = create('div', {class: ['flex-col', 'carousel-container'], 'data-position': position})
   const img = create('img',
     {
       'data-link': tile.link,
@@ -352,20 +367,15 @@ function buildTile(tile, section, first, position = 0) {
   )
   if (section === 'recent') container.id = tile.title.replace(/[\s()]/g, '')
 
-  container.appendChild(img)
-  container.appendChild(title)
+  appendChildren(container, img, title)
 
   if (!defaultSection(sect)) {
-    const arrowDiv = create('div', {
-      style: {width: '100%', display: 'flex', flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', overflow: 'hidden'},
-      class: `${sect}-arrows`
-    })
+    const arrowDiv = create('div', {class: [`${sect}-arrows`, 'flex-row', 'jc-sa', 'ai-c', 'overflow-h']})
     const left = create('span', {class: ['fas', 'fa-arrow-circle-left'], 'data-position': position}, {'click':  function() {moveComic('l', sect, container)}})
     const right = create('span', {class: ['fas', 'fa-arrow-circle-right'], 'data-position': position}, {'click': function() {moveComic('r', sect, container)}})
 
-    arrowDiv.appendChild(left)
-    arrowDiv.appendChild(right)
-    container.appendChild(arrowDiv)
+    appendChildren(arrowDiv, left, right)
+    appendChildren(container, arrowDiv)
   }
 
   if (first) comicDiv.insertBefore(container, comicDiv.children[0])
@@ -414,7 +424,7 @@ function buildGroups(add) {
     sortedDB.forEach( c => {
       const comic = database[c]
       GROUP_ISSUE_ARRAY.push({title: c, db: group.sectionTitle})
-      buildTile(new Tile(c, comic.cover, comic.link),  group.sectionID, false, comic.position)
+      buildTile(new TILE(c, comic.cover, comic.link),  group.sectionID, false, comic.position)
     })
   })
 
@@ -431,9 +441,7 @@ function buildGroups(add) {
       const menuIcon1 = create('div', {class: 'menu-icons'})
       const menuIcon2 = create('div', {class: 'menu-icons'})
       const menuIcon3 = create('div', {class: 'menu-icons'})
-    menuIconsContainer.appendChild(menuIcon1)
-    menuIconsContainer.appendChild(menuIcon2)
-    menuIconsContainer.appendChild(menuIcon3)
+    appendChildren(menuIconsContainer, menuIcon1, menuIcon2, menuIcon3)
     // Menu icons (after clicking hamburger)
     const titleMenuContainer = create('div', {class: 'title-menu_container', id: `${group.sectionID}-title-menu`})
       const titleMenu = create('div', {class: 'title-menu'})
@@ -449,14 +457,8 @@ function buildGroups(add) {
           slash.textContent = '/'
           const no = create('span', {style: {marginLeft: '2px'}}, {'click': () => deleteGroupClick(group.sectionID)})
           no.textContent = 'No'
-          deleteMenu.appendChild(sure)
-          deleteMenu.appendChild(yes)
-          deleteMenu.appendChild(slash)
-          deleteMenu.appendChild(no)
-      titleMenu.appendChild(reverseIcon)
-      titleMenu.appendChild(changeOrderIcon)
-      titleMenu.appendChild(deleteGroupIcon)
-      titleMenu.appendChild(deleteMenu)
+          appendChildren(deleteMenu, sure, yes, slash, no)
+      appendChildren(titleMenu, reverseIcon, changeOrderIcon, deleteGroupIcon, deleteMenu)
     titleMenuContainer.appendChild(titleMenu)
     // Carousel
     const carouselOuter = create('div', {class: 'carousel-outer', id: group.sectionID})
@@ -465,13 +467,131 @@ function buildGroups(add) {
     // Description
     const desc = create('div', {class: 'section-desc', id: `${group.sectionID}-desc`})
 
-    mainDiv.appendChild(sectionText)
-    mainDiv.appendChild(menuIconsContainer)
-    mainDiv.appendChild(titleMenuContainer)
+    appendChildren(mainDiv, sectionText, menuIconsContainer, titleMenuContainer)
 
-    reader.insertBefore(desc, reader.children[6])
-    reader.insertBefore(carouselOuter, reader.children[6])
-    reader.insertBefore(mainDiv, reader.children[6])
+    reader.insertBefore(desc, q('.addGroup').nextElementSibling)
+    reader.insertBefore(carouselOuter, q('.addGroup').nextElementSibling)
+    reader.insertBefore(mainDiv, q('.addGroup').nextElementSibling)
+  }
+}
+
+function buildLists(name = '') {
+  const listlist = qi('listlist')
+
+  if (name) {
+    addList(name)
+    return
+  }
+
+  listlist.innerHTML = ''
+  if (!LISTS.length) return
+
+  LISTS.forEach( l => {
+    addList(l)
+  })
+
+  function addList(n) {
+    const listDiv = create('div')
+    const delIcon = create('i', {class: ['fa', 'fa-trash-alt']}, {'click': () => removeIssueList(n)})
+    const span = create('span', {draggable: true, style: {marginLeft: '12px'}, class: 'link'}, {'click': () => toggleListIssues(n)})
+    span.textContent = n
+    appendChildren(listDiv, delIcon, span)
+    appendChildren(listlist, listDiv)
+  }
+}
+
+function removeIssueList(list) {
+  deleteListFromDB(list)
+  LISTS = getDB('lists')
+  buildLists()
+}
+
+function toggleListIssues(list) {
+  const listlist = qi('listlist')
+  const issuelist = qi('issuelist')
+  if (!issuelist.style.display) issuelist.style.display = 'none'
+  if (issuelist.style.display === 'none') {
+    buildIssueList()
+  } else {
+    listlist.style.display = 'flex'
+    issuelist.style.display = 'none'
+    issuelist.innerHTML = ''
+  }
+
+  let dragItem
+
+  function listItemClick(opts) {
+    navigation('comic', opts)
+  }
+
+  function dragStart(evt) {
+    dragItem = evt.target
+  }
+
+  function dragOver(evt) {
+    evt.preventDefault()
+    if (evt.target.nodeName === 'DIV'){
+      evt.target.style.paddingBottom = '25px'
+    } else {
+      evt.target.parentElement.style.paddingBottom = '25px'
+    }
+  }
+
+  function dragLeave(evt) {
+    evt.preventDefault()
+    if (evt.target.nodeName === 'DIV'){
+      evt.target.style.paddingBottom = '0px'
+    }
+  }
+
+  function dropTarget(evt) {
+    evt.preventDefault()
+    const dropItem = evt.target.nodeName === 'DIV' ? evt.target : evt.target.parentElement
+    dropItem.style.paddingBottom = '0px'
+    moveListIssues(list, dragItem.dataset.position, dropItem.dataset.position)
+    buildIssueList()
+  }
+
+  function deleteIssue(issue) {
+    deleteListIssue(list, issue)
+    buildIssueList()
+  }
+
+  function buildIssueList() {
+    const issues = list ? getDB(list) : []
+    listlist.style.display = 'none'
+    issuelist.style.display = 'flex'
+    issuelist.innerHTML = ''
+    appendChildren(issuelist, create('span', {textContent: '< Back', class: 'link'}, {'click': toggleListIssues}))
+    if (!issues.length) {
+      appendChildren(issuelist, create('span', {textContent: 'No Issues Added To List'}))
+    } else {
+      issues.forEach( (issue) => {
+        const txt = `${issue.title} - ${issue.issue}`
+        const opts = {
+          title: issue.title,
+          issue: issue.issue,
+          link: issue.link
+        }
+
+        const issueDiv = create('div',
+          {draggable: true, style: { borderBottom: '1px solid #920223'}, 'data-position': issue.position},
+          {
+            'dragstart': dragStart,
+            'dragover': dragOver,
+            'dragleave': dragLeave,
+            'drop': dropTarget
+          }
+        )
+
+        appendChildren(issuelist,
+          appendChildren(issueDiv,
+            create('span', {textContent: txt, class: 'link', style: {marginLeft: '5px'}}, {'click': () => listItemClick(opts)}),
+            create('i', {class: ['fas', 'fa-trash-alt'], style: {float: 'right'}}, {'click': () => deleteIssue(issue.issue)}),
+            'return'
+          ))
+      })
+    }
   }
 }
 
@@ -511,7 +631,7 @@ function deleteGroup(section) {
     .forEach( ele => ele.parentElement.removeChild(ele))
 
   deleteGroupDB(section)
-  setTimeout(() => GROUPS = getGroups(), 1000)
+  setTimeout(() => GROUPS = getDB('groups', {type: 'arr'}), 1000)
   toast('Group Successfully Deleted!')
 }
 
@@ -530,7 +650,7 @@ function buildDescription(evt) {
     loader('stop')
     const descContainer = create('div', {style: {padding: '12px', border: '#5E051D 2px solid', marginBottom: '10px', display: 'flex', justifyContent: 'flex-start'}})
     const closeDesc = create('span', {class: 'link', textContent: 'x', style: {marginRight: '20px'}}, {'click': () => qi(`${evt.section}-desc`).innerHTML = ''})
-    const info = create('div', {style: {width: '35%', display: 'flex', flexDirection: 'column'}})
+    const info = create('div', {style: {width: '35%'}, class: 'flex-col'})
     const nf = create('p')
     nf.textContent = 'Not found'
     info.appendChild(nf)
@@ -542,16 +662,13 @@ function buildDescription(evt) {
 
   loader('start')
   //Scroll the selected section to the top of the page in a fancy slow move
-  if (evt.section !== 'search') scrollSection(qi(`${evt.section}`))
+  if (evt.section !== 'search' && evt.section !=='mostview') scrollSection(qi(`${evt.section}`))
 
   const descId = `${evt.section}-desc`
   const comicLink = evt.link
-  const issueFragment = document.createDocumentFragment()
-  const descFragment = document.createDocumentFragment()
-  const groupFragment = document.createDocumentFragment()
   const view = evt.view ? evt.view : 'i'
 
-  let desc, comicTitle
+  let desc
   let comicCover = evt.cover
 
   function ipcMessage(e) {
@@ -569,51 +686,54 @@ function buildDescription(evt) {
     // titleHeader is the title header. It contains the title of the comic,
     // the "Go to Comic" and "Add to Group", and the close button
     const titleHeader = create('div', {class: 'desc-title'})
-    // Title of the comic
-    const title = create('p', {textContent: descArgs.title, style: {width: '34%'}})
-    // Contains 'Add to/Remove from Reading List' and 'Show Issues/Description'
-    const optionsContainer = create('div', {
-      'style': {display: 'flex', flexDirection: 'row', width: '33%'},
-      class: 'section-desc_options'
-    })
-    // Icon for 'Show Issues'
-    const descReadIcon = create('span', {class: ['fas', 'fa-list'], id: 'desc-read-icon', style: {display: 'block'}})
-    // Span: 'Show Issues'
-    const listIssues = create('span', {
-      class: ['desc-show-issues', 'link'],
-      textContent: 'Issues'
-    }, {'click': () => toggleView('i')})
-    // Icon for 'Show Description'
-    const descIssuesIcon = create('span', {
-      class: ['fas', 'fa-book'],
-      id: 'issues-icon',
-      style: {marginLeft: '10px', display: 'block'}
-    })
-    // Span: 'Show Description'
-    const showDescription = create('span', {
-      class: ['issues-show-desc', 'link'],
-      textContent: 'Description'
-    }, {'click': () => toggleView('d')})
-    // Icon for 'Add To Reading List'
-    const addIcon = create('span', {class: ['fas', 'fa-plus']})
-    // Span: 'Add To Reading List'
-    const addToGroup = create('span', {class: 'link', textContent: 'Add To Group'}, {'click': () => toggleView('g')})
-    // Icon for 'Remove From Reading List'
-    const removeIcon = create('span', {class: ['fas', 'fa-minus']})
-    // Span: 'Remove From Reading List'
-    const removeFromGroup = create('span', {
-      class: 'link',
-      textContent: ''
-    })
-    // Div to house the 'X' to close description/issues
-    const closeDescription = create('div', {
-      style: {
-        textAlign: 'right',
-        width: '33%'
-      }
-    }, {'click': () => desc.innerHTML = ''})
-    // 'X' to close description/issues
-    const closeDesc = create('span', {class: 'link', textContent: 'x', style: {marginRight: '20px'}})
+      // Title of the comic
+      const title = create('p', {textContent: descArgs.title, style: {width: '100%'}})
+      // Div to house the 'X' to close description/issues
+      const closeDescription = create('div', {
+        style: {
+          textAlign: 'right',
+          position: 'absolute',
+          right: '15px'
+        }
+      }, {'click': () => desc.innerHTML = ''})
+      // 'X' to close description/issues
+      const closeDesc = create('span', {class: 'link', textContent: 'x', style: {marginRight: '20px'}})
+
+    const secondaryBar = create('div', {class: ['flex-row', 'jc-sb']})
+      // Contains 'Add to/Remove from Reading List' and 'Show Issues/Description'
+      const optionsContainer = create('div', {
+        'style': {display: 'flex', flexDirection: 'row', margin: '10px'},
+        class: 'section-desc_options'
+      })
+      // Icon for 'Show Issues'
+      const descReadIcon = create('span', {class: ['fas', 'fa-list'], id: 'desc-read-icon', style: {display: 'block'}})
+      // Span: 'Show Issues'
+      const listIssues = create('span', {
+        class: ['desc-show-issues', 'link'],
+        textContent: 'Issues'
+      }, {'click': () => toggleView('i')})
+      // Icon for 'Show Description'
+      const descIssuesIcon = create('span', {
+        class: ['fas', 'fa-book'],
+        id: 'issues-icon',
+        style: {marginLeft: '10px', display: 'block'}
+      })
+      // Span: 'Show Description'
+      const showDescription = create('span', {
+        class: ['issues-show-desc', 'link'],
+        textContent: 'Description'
+      }, {'click': () => toggleView('d')})
+      // Icon for 'Add To Reading List'
+      const addIcon = create('span', {class: ['fas', 'fa-plus']})
+      // Span: 'Add To Reading List'
+      const addToGroup = create('span', {class: 'link', textContent: 'Add To Group'}, {'click': () => toggleView('g')})
+      // Icon for 'Remove From Reading List'
+      const removeIcon = create('span', {class: ['fas', 'fa-minus']})
+      // Span: 'Remove From Reading List'
+      const removeFromGroup = create('span', {
+        class: 'link',
+        textContent: ''
+      })
     // Decides whether to add Add or Remove to/from Reading List icons
     if (defaultSection(evt.section)) {
       let foundDB
@@ -641,18 +761,44 @@ function buildDescription(evt) {
       optionsContainer.appendChild(removeFromGroup)
     }
 
-    optionsContainer.appendChild(descReadIcon)
-    optionsContainer.appendChild(listIssues)
-    optionsContainer.appendChild(descIssuesIcon)
-    optionsContainer.appendChild(showDescription)
-    closeDescription.appendChild(closeDesc)
-    titleHeader.appendChild(optionsContainer)
-    titleHeader.appendChild(title)
-    titleHeader.appendChild(closeDescription)
+    // Right side options
+    const rightSideOptions = create('div', {class: ['flex-row', 'right-side_options']})
+    // (Un)Check All
+    const uncheckDiv = create('div', {class: ['link', 'flex-row', 'ai-c']}, {'click': () => toggleAllIssueChecks(false)})
+      const uncheckIcon = create('i', {class: ['fas', 'fa-times']})
+      const uncheckText = create('span', {textContent: 'Uncheck All', class: 'link'})
+    const checkDiv = create('div', {class: ['link', 'flex-row', 'ai-c']}, {'click': () => toggleAllIssueChecks(true)})
+      const checkIcon = create('i', {class: ['fas', 'fa-check']})
+      const checkText = create('span', {textContent: 'Check All', class: 'link'})
+    // Add To List
+    const addToListDiv = create('div', {class: ['arrow-div', 'link']}, {'click': () => toggleView('l')})
+      const addToListIcon = create('i', {class: ['fas', 'fa-list']})
+      const addToList = create('span', {textContent: 'Add To List'})
+
+    appendChildren(uncheckDiv, uncheckIcon, uncheckText)
+    appendChildren(checkDiv, checkIcon, checkText)
+    appendChildren(addToListDiv, uncheckDiv, checkDiv, addToListIcon, addToList)
+    appendChildren(rightSideOptions, uncheckDiv, checkDiv, addToListDiv)
+    appendChildren(optionsContainer, descReadIcon, listIssues, descIssuesIcon, showDescription)
+    appendChildren(secondaryBar, optionsContainer, rightSideOptions)
+    appendChildren(closeDescription, closeDesc)
+    appendChildren(titleHeader, title, closeDescription)
+
+    // Issue Lists
+    const listContainer = create('div', {class: 'group-container', style: {borderBottom: 'none'}})
+    if (!LISTS.length) {
+      const empty = create('span', {textContent: 'No Lists Created'})
+      appendChildren(listContainer, empty)
+    } else {
+      LISTS.forEach( l => {
+        const a = create('span', {textContent: l, class: 'link'}, {'click': () => addIssuesToList(l, descArgs.title)})
+        appendChildren(listContainer, a)
+      })
+    }
 
     // Description
     const descContainer = create('div', {class: 'desc-info'})
-    const info = create('div', {style: {width: '35%', display: 'flex', flexDirection: 'column'}})
+    const info = create('div', {style: {width: '35%'}, class: 'flex-col'})
     const genre = create('p', {
       textContent: `${descArgs.genres.length > 1 ? 'Genres' : 'Genre'}: ${descArgs.genres.join(', ')}`,
       fontWeight: 'bold'
@@ -671,29 +817,20 @@ function buildDescription(evt) {
     })
     const publicationdate = create('p', {textContent: `Publication Date: ${descArgs.publicationdate}`})
 
-    info.appendChild(genre)
-    info.appendChild(writer)
-    info.appendChild(artist)
-    info.appendChild(publisher)
-    info.appendChild(publicationdate)
+    appendChildren(info, genre, writer, artist, publisher, publicationdate)
 
-    descContainer.appendChild(info)
-    descFragment.appendChild(descContainer)
+    appendChildren(descContainer, info)
 
-    const summary = create('div', {style: {width: '60%', display: 'flex', flexDirection: 'column'}})
+    const summary = create('div', {style: {width: '60%'}, class: ['flex-col']})
     const summaryTitle = create('p', {textContent: 'Summary:'})
     const summarySummary = create('p', {textContent: descArgs.summary})
 
-    summary.appendChild(summaryTitle)
-    summary.appendChild(summarySummary)
-    descContainer.appendChild(summary)
-
-    descNode = descFragment.cloneNode(true)
+    appendChildren(summary, summaryTitle, summarySummary)
+    appendChildren(descContainer, summary)
 
     if (desc.children.length) desc.innerHTML = ''
 
-    desc.appendChild(titleHeader)
-    desc.appendChild(descFragment)
+    appendChildren(desc, titleHeader, secondaryBar, listContainer, descContainer)
 
     // Build issues
     const ishArgs = e.args[0].issues
@@ -704,14 +841,14 @@ function buildDescription(evt) {
     sortedIssuesArray.forEach(i => {
       let spanClass = 'link'
       if (recentDB[comicTitle] && recentDB[comicTitle].issues[getIssue(i, 'issue')]) spanClass = 'link-read'
-      const a = create('span', {textContent: i, 'data-link': ishArgs[i], class: spanClass})
-      issueContainer.appendChild(a)
+      const linkDiv = create('div', {style: {display: 'inline-block', textAlign: 'center', width: '100%'}})
+      const c = create('input', {type: 'checkbox', style: {display: 'inline-block'}})
+      const a = create('span', {textContent: getIssue(i, 'issue'), style: {display: 'inline-block'}, 'data-link': ishArgs[i], class: spanClass})
+      appendChildren(linkDiv, c, a)
+      issueContainer.appendChild(linkDiv)
     })
 
-    issueFragment.appendChild(issueContainer)
-    issueNode = issueFragment.cloneNode(true)
-
-    desc.appendChild(issueFragment)
+    desc.appendChild(issueContainer)
 
     if (q('.issue-container span').length) {
       q('.issue-container span').forEach(i => i.addEventListener('click', onclick))
@@ -729,10 +866,7 @@ function buildDescription(evt) {
       groupContainer.appendChild(a)
     })
 
-    groupFragment.appendChild(groupContainer)
-    groupsNode = groupFragment.cloneNode(true)
-
-    desc.appendChild(groupFragment)
+    desc.appendChild(groupContainer)
 
     toggleView(view)
 
@@ -744,37 +878,57 @@ function buildDescription(evt) {
     }
 
     function toggleView(v) {
+      let noneArr, blockArr, flexArr = []
+
       if (v === 'i') {
-        descContainer.style.display = 'none'
-        descReadIcon.style.display = 'none'
-        listIssues.style.display = 'none'
+        noneArr = [
+          descContainer,
+          descReadIcon,
+          listIssues,
+          listContainer,
+          groupContainer
+        ]
 
-        groupContainer.style.display = 'none'
-
-        issueContainer.style.display = 'block'
-        descIssuesIcon.style.display = 'block'
-        showDescription.style.display = 'block'
+        blockArr = [
+          descIssuesIcon,
+          issueContainer,
+          showDescription
+        ]
+        flexArr = [rightSideOptions]
       } else if (v === 'd') {
-        descContainer.style.display = 'flex'
-        descReadIcon.style.display = 'block'
-        listIssues.style.display = 'block'
-
-        groupContainer.style.display = 'none'
-
-        issueContainer.style.display = 'none'
-        descIssuesIcon.style.display = 'none'
-        showDescription.style.display = 'none'
+        flexArr = [descContainer]
+        blockArr = [descReadIcon, listIssues]
+        noneArr = [
+          groupContainer,
+          issueContainer,
+          descIssuesIcon,
+          showDescription,
+          rightSideOptions,
+          listContainer
+        ]
       } else if (v === 'g') {
-        descContainer.style.display = 'none'
-        descReadIcon.style.display = 'block'
-        listIssues.style.display = 'block'
-
-        groupContainer.style.display = 'block'
-
-        issueContainer.style.display = 'none'
-        descIssuesIcon.style.display = 'block'
-        showDescription.style.display = 'block'
+        noneArr = [descContainer, issueContainer, rightSideOptions]
+        blockArr = [
+          descReadIcon,
+          listIssues,
+          groupContainer,
+          descIssuesIcon,
+          showDescription
+        ]
+      } else if (v === 'l') {
+        noneArr = [descContainer, groupContainer]
+        blockArr = [
+          issueContainer,
+          descIssuesIcon,
+          showDescription,
+          listContainer
+        ]
+        flexArr = [rightSideOptions]
       }
+
+      noneArr.forEach( i => i.style.display = 'none')
+      blockArr.forEach( i => i.style.display = 'block')
+      flexArr.forEach( i => i.style.display = 'flex')
     }
 
     function addComicToGroup(group) {
@@ -804,7 +958,7 @@ function buildDescription(evt) {
     const comic = {title: comicTitle, link: comicLink, cover: comicCover}
     const position = writeToDB(comic, `${section}`)
     GROUP_ISSUE_ARRAY.push({db: section, title: comicTitle})
-    buildTile(new Tile(comicTitle, comicCover, comicLink), `${section}`, true, position)
+    buildTile(new TILE(comicTitle, comicCover, comicLink), `${section}`, true, position)
     toast(`${comicTitle} successfully added!`)
   }
 
@@ -835,13 +989,67 @@ function scrollSection(section) {
   }
 }
 
-function mdInput(e) {
-  if ( (e.keyCode || e.which) === 13) addGroup()
+function submitInput(e, f) {
+  if ( (e.keyCode || e.which) === 13) f()
+}
+
+function showListInput() {
+  const listDiv = qi('newListDiv')
+  const tr = listDiv.style.transform
+  if (!tr || tr === 'translateY(-26px)') {
+    listDiv.style.transform = 'translateY(0px)'
+    qi('list-plus').style.transform = 'rotate(45deg)'
+    qi('list-name').focus()
+  } else {
+    listDiv.style.transform = 'translateY(-26px)'
+    qi('list-plus').style.transform = 'rotate(0deg)'
+  }
+}
+
+function createList() {
+  showListInput()
+  const name = qi('list-name').value
+  qi('list-name').value = ''
+  createIssueList(name)
+  LISTS = getDB('lists')
+  buildLists(name)
+}
+
+function toggleAllIssueChecks(type) {
+  const inputs = q('input[type="checkbox"]')
+  inputs.forEach( input => {
+    input.checked = type
+  })
+}
+
+function addIssuesToList(db, title) {
+  const inputs = q('input[type="checkbox"]')
+
+  if (!inputs && !inputs.length) {
+    toast('No issues selected')
+    return
+  }
+
+  if (!inputs.length) {
+    const issue = inputs.nextElementSibling
+    addIssuesToListDB(db, title, issue.textContent, issue.dataset.link)
+  } else {
+    inputs.forEach( c => {
+      if (c.checked) {
+        const issue = c.nextElementSibling
+        addIssuesToListDB(db, title, issue.textContent, issue.dataset.link)
+      }
+    })
+  }
+
+  const ish = inputs.length ? 'Issues' : 'Issue'
+  toast(`${ish} added to list!`)
 }
 
 function showAddGroup() {
   const container = qc('addGroup-groupName_container')
   const plus = qc('addGroup-icons').querySelector('.fa-plus')
+  qi('group-name').focus()
   if (!container.style.transform) container.style.transform = 'translateY(-25px)'
   if (container.style.transform === 'translateY(0px)') {
     container.style.transform = 'translateY(-25px)'
@@ -854,8 +1062,18 @@ function showAddGroup() {
 
 function addGroup() {
   const sectionTitle = qi('group-name').value
+  qi('group-name').value = ''
   if (!sectionTitle) return
   showAddGroup()
+  const sectionID = createUniqueID()
+
+  createGroup(sectionID, sectionTitle)
+  GROUPS.push({sectionID, sectionTitle})
+  buildGroups({group: {sectionID, sectionTitle}})
+  toast('Group Successfully Added!')
+}
+
+function createUniqueID() {
   let sectionID = ''
   let possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
 
@@ -871,11 +1089,6 @@ function addGroup() {
   }
 
   if (!uniqueID) return addGroup()
-
-  createGroup(sectionID, sectionTitle)
-  GROUPS.push({sectionID, sectionTitle})
-  buildGroups({group: {sectionID, sectionTitle}})
-  toast('Group Successfully Added!')
 }
 
 function titleMenuToggle(sectionId) {
@@ -999,12 +1212,13 @@ function changeSort(sectionId) {
   })
 }
 
-function buildComic(e) {
-  loader('start', false, 300)
+function buildComic(evt) {
+  loader('start', true, 300)
   // Save to Recently Read database
   // Set up Home and download button
 
   qi('home-download').style.visibility = 'visible'
+  qi('lists').style.width = '0'
 
   // TODO: This will show/hide the download button based on the downloaded database
   // TODO: Unfortunately it doesn't take into account locally deleting the files, since
@@ -1023,7 +1237,7 @@ function buildComic(e) {
   // ) qi('download').style.visibility = 'hidden'
 
   const baseLink = currentComic.link
-  const comicLink = e.link
+  const comicLink = evt.link
 
   function ipcMessage(e) {
     if (e.channel === 'msg') {
@@ -1036,14 +1250,7 @@ function buildComic(e) {
 
     if (!q('#comic')) {
       comicPanel = create('div', {class: 'reader-view', id: 'comic', style: {zIndex: '2'}})
-      comicDiv = create('div', {
-        style: {
-          width: '100%',
-          display: 'flex',
-          justifyContent: 'center',
-          flexDirection: 'column'
-        }
-      })
+      comicDiv = create('div', {class: ['flex-col', 'jc-c']})
       comicPanel.appendChild(comicDiv)
     } else {
       comicPanel = q('#comic')
@@ -1085,15 +1292,15 @@ function buildComic(e) {
       previousIssue = nav.prev
     }
 
-    function rightClickImage(e) {
+    function rightClickImage(evnt) {
       const menu = qi('rotate-menu')
       if (menu) q('body').removeChild(menu)
 
-      if (e.which === 3) rightClickMenu({target: e.target, x: e.clientX, y: e.clientY})
+      if (evnt.which === 3) rightClickMenu({target: evnt.target, x: evnt.clientX, y: evnt.clientY})
     }
   }
 
-  bgRender(e.link + '&readType=1', './js/preload/comic.preload.js', {'ipc-message': ipcMessage})
+  bgRender(evt.link + '&readType=1', './js/preload/comic.preload.js', {'ipc-message': ipcMessage})
 }
 
 function rightClickMenu(coords = {target: null, x: 0, y: 0}) {
@@ -1190,6 +1397,21 @@ function download() {
   const downloadedDB = JSON.parse(fs.readFileSync('./database/downloaded.database.json').toString())
   if (downloadedDB[currentComic.title] && downloadedDB[currentComic.title][currentComic.issue]) return
   downloadComic(currentComic)
+}
+
+function showLists() {
+  const listDiv = qi('lists')
+  listDiv.style.height = `${reader.offsetHeight - 62}px`
+  if (!listDiv.style.width) listDiv.style.width = '0'
+  const [ lstyle, ltext, rstyle, gstyle ] =
+    qc('addGroup-icons').querySelector('div').style.visibility !== 'hidden'
+    ? [ `400px`, 'Hide Lists', 'hidden', 'hidden' ]
+    : [ '0', 'Show Lists', 'auto', 'visible']
+
+  listDiv.style.width = lstyle
+  qc('addGroup-icons').querySelector('div:nth-of-type(2) > p').innerText = ltext
+  // reader.style.overflow = rstyle
+  qc('addGroup-icons').querySelector('div').style.visibility = gstyle
 }
 
 ipc.on('download', (e, a) => {

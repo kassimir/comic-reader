@@ -1,6 +1,5 @@
 const ipcRender = require('electron').ipcRenderer
 const ipcMain = require('electron').ipcMain
-const fs = require('fs')
 
 /*
   I don't want to use jQuery, but I also hate writing document.querySelector[All](element)
@@ -167,147 +166,16 @@ function sortIssues(arr) {
   return sortedArr
 }
 
-function getGroups() {
-  if (!fs.existsSync('./database/groups.database.json')) {
-    fs.writeFileSync('./database/groups.database.json', '[]')
-    return []
+function appendChildren(parent, ...children) {
+  if (!children.length) return
+
+  let ret = false
+  if (children[children.length - 1] === 'return') {
+    children.pop()
+    ret = true
   }
-
-  return JSON.parse(fs.readFileSync('./database/groups.database.json').toString())
-}
-
-function createGroup(sectionID, sectionTitle) {
-  const groups = getGroups()
-  groups.push({sectionID, sectionTitle})
-  fs.writeFileSync('./database/groups.database.json', JSON.stringify(groups))
-  fs.writeFileSync(`./database/${sectionID}.database.json`, `{}`)
-}
-
-function deleteGroupDB(sectionID) {
-  const dbpath = `./database/${sectionID}.database.json`
-
-  const groupsDB = getGroups()
-  groupsDB.splice(groupsDB.findIndex( g => g.sectionID === sectionID), 1)
-  rewriteDB('groups', groupsDB)
-  fs.unlinkSync(dbpath)
-}
-
-// Writes to "database"
-// TODO: utilize a model
-function writeRecent(comic, link) {
-  const recentDB = JSON.parse(fs.readFileSync('./database/recent.database.json').toString())
-  const l = Object.keys(recentDB).length
-  if (!recentDB[comic.title]) {
-    recentDB[comic.title] = {position: l, link: comic.link, cover: comic.cover, issues: {[comic.issue] : link}}
-  } else {
-    recentDB[comic.title].issues[comic.issue] = link
-    recentDB[comic.title].position = l
-  }
-
-  if (Object.keys(recentDB).length > 30) {
-    const newCurrentList = {}
-    const sortedRecent = Object.keys(recentDB).sort( (a, b) => {
-      return new Date(recentDB[b].position) - new Date(recentDB[a].position)
-    }).splice(0, 30)
-
-    sortedRecent.forEach( c => {
-      newCurrentList[c] = recentDB[c]
-    })
-
-    send({type: 'recent', data: newCurrentList}, 'update', 'r')
-
-  } else send({type: 'recent', data: recentDB}, 'update', 'r')
-}
-
-function readDB(db) {
-  const dbpath = `./database/${db}.database.json`
-
-  if (fs.openSync(dbpath, 'r')) return JSON.parse(fs.readFileSync(dbpath).toString())
-  else return {}
-}
-
-// Writes to "database"
-// Returns the length of the database for `position` purposes
-function writeToDB(comic, db) {
-  const dbpath = `./database/${db}.database.json`
-  const fd = fs.openSync(dbpath, 'rs+')
-  const database = fd ? JSON.parse(fs.readFileSync(fd).toString()) : `{}`
-  const dbLength = Object.keys(database).length
-  if (!database[comic.title]) {
-    database[comic.title] = {position: `${dbLength + 1}`, link: comic.link, cover: comic.cover}
-    fs.writeFileSync(dbpath, JSON.stringify(database))
-  }
-
-  return dbLength + 1
-}
-
-function updateDB(comic1, comic2, db) {
-  const dbpath = `./database/${db}.database.json`
-  const fd = fs.openSync(dbpath, 'rs+')
-
-  if (!fd) return
-
-  const database = JSON.parse(fs.readFileSync(fd).toString())
-  database[comic1.title] = new Object(comic1)
-  database[comic2.title] = new Object(comic2)
-  fs.writeFileSync(fd, JSON.stringify(database))
-}
-
-// Deletes from "database"
-function deleteFromDB(comic, db) {
-  const dbpath = `./database/${db}.database.json`
-  fs.open(dbpath, 'r', (err) => {
-    if (err) {
-      return
-    }
-
-    fs.readFile(dbpath, (err, f) => {
-      const database = JSON.parse(f.toString())
-      const dbLength = Object.keys(database).length
-      if (database[comic.title]) {
-        delete database[comic.title]
-        const sortedReading = Object.keys(database).sort((a, b) => {
-          return database[b].position - database[a].position
-        })
-        const newDB = {}
-        sortedReading.forEach( (c, i) => {
-          const n = new Object(database[c])
-          n.position = dbLength - i
-          newDB[c] = n
-        })
-        fs.writeFileSync(dbpath, JSON.stringify(newDB))
-      }
-    })
-  })
-}
-
-// Completely rewrites "database"
-function rewriteDB(db, data) {
-  const dbpath = `./database/${db}.database.json`
-
-  fs.open(dbpath, 'r', (err) => {
-    if (err) return
-
-    fs.writeFileSync(dbpath, JSON.stringify(data))
-  })
-}
-
-function downloadComic(comic) {
-  const downloadedDB = JSON.parse(fs.readFileSync('./database/downloaded.database.json').toString())
-  const imgs = q('#comic > div').children
-  const images = []
-
-  if (!downloadedDB[comic.title]) {
-    downloadedDB[comic.title] = {
-      issues: [{
-        issue: comic.issue,
-        length: imgs.length
-      }]
-    }
-  }
-
-  Array.from(imgs).forEach(i => images.push(i.src))
-  send({comic: comic, images: images, data: downloadedDB}, 'download', 'r')
+  children.forEach( child => parent.appendChild(child))
+  if (ret) return parent
 }
 
 module.exports = {
@@ -318,14 +186,5 @@ module.exports = {
   create: create,
   getOrRemoveIssue: getOrRemoveIssue,
   sortIssues: sortIssues,
-  getGroups: getGroups,
-  createGroup: createGroup,
-  deleteGroupDB: deleteGroupDB,
-  writeRecent: writeRecent,
-  readDB: readDB,
-  rewriteDB: rewriteDB,
-  writeToDB: writeToDB,
-  updateDB: updateDB,
-  deleteFromDB: deleteFromDB,
-  downloadComic: downloadComic
+  appendChildren: appendChildren
 }

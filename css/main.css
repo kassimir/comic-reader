@@ -9,6 +9,38 @@ form {
     display: flex;
 }
 
+/*General Styles*/
+
+.flex-row {
+    display: flex;
+    flex-direction: row;
+}
+
+.flex-col {
+    display: flex;
+    flex-direction: column;
+}
+
+.jc-c {
+    justify-content: center;
+}
+
+.jc-sa {
+    justify-content: space-around;
+}
+
+.jc-sb {
+    justify-content: space-between;
+}
+
+.ai-c {
+    align-items: center;
+}
+
+.overflow-h {
+    overflow: hidden;
+}
+
 #nav {
     position: absolute;
     top: 0;
@@ -47,6 +79,31 @@ form {
     font-size: 171%;
     cursor: pointer;
 }
+
+#lists {
+    transition: width 1s;
+    background-color: black;
+    z-index: 3;
+    width: 0;
+    border: 1px solid #920223;
+    position: absolute;
+    top: 115px;
+    right: 0;
+    outline: none;
+    color: white;
+    white-space: nowrap;
+    overflow: auto;
+}
+
+#list-create_title {
+    line-height: 0;
+    display: flex;
+    align-items: center;
+    flex-direction: row;
+    width: 125px;
+}
+
+#list-create_title:hover { color: #920223; cursor: pointer; }
 
 #paginate {
     display: none;
@@ -103,6 +160,10 @@ form {
     overflow: hidden;
 }
 
+.fa-list.fa-2x {
+    margin-left: 7px;
+}
+
 .title-menu_container {
     width: 220px;
     overflow: hidden;
@@ -122,7 +183,7 @@ form {
 }
 
 .addGroup {
-    margin-left: 25px;
+    margin: 0 25px;
     overflow: hidden;
 }
 
@@ -131,11 +192,11 @@ form {
     flex-direction: row;
     align-items: center;
     cursor: pointer;
-    width: 95px;
+    justify-content: space-between;
     line-height: 0;
 }
 
-#group-name {
+#group-name, #list-name {
     border: 1px solid red;
     background-color: black;
     color: white;
@@ -143,26 +204,26 @@ form {
     padding-left: 5px;
 }
 
-#groupButton {
+#groupButton, #listButton {
     background: linear-gradient(to bottom, #e90335 0%,#c60229 44%,#920223 100%);
     border: none;
 }
 
-.addGroup-icons:hover, .addGroup-icons:hover > p {
-    color: #920223;
-}
-
-.addGroup-icons .fa-plus {
+.addGroup-icons > div .fa-plus {
     transition: transform 1s;
 }
 
 .addGroup-icons_p {
     margin-left: 5px;
-    color: white;
+}
+
+.addGroup-icons > div:hover {
+    color: #920223;
 }
 
 .addGroup-groupName {
     width: 235px;
+    margin-top: 1px;
     overflow: hidden;
 }
 
@@ -264,8 +325,8 @@ form {
 
 .link:hover, .link-read:hover {
     text-decoration: underline;
+    color: #920223;
     cursor: pointer;
-    color: white;
 }
 
 .link-read {
@@ -320,7 +381,6 @@ form {
     display: flex;
     flex-direction: row;
     padding: 5px;
-    width: 100%;
 }
 
 .desc-title p {
@@ -342,18 +402,30 @@ form {
 
 .issue-container, .group-container {
     padding: 12px;
-    column-count: 3;
+    column-count: 5;
     color: white;
     border: #5E051D 2px solid;
     text-align: center;
 }
 
-/*.group-container {*/
-    /*display: none;*/
-/*}*/
-
 .issue-container span, .group-container span {
     display: block;
+}
+
+.right-side_options > div {
+    margin-left: 10px;
+}
+
+.right-side_options > div i {
+    margin-left: 10px;
+    margin-right: 3px;
+}
+
+.arrow-div {
+    display: flex;
+    flex-direction: row;
+    margin-right: 15px;
+    align-items: center;
 }
 
 .loader {

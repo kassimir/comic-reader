@@ -1,4 +1,4 @@
-class Tile {
+class TILE {
 
   constructor(title, img, link) {
     this.title = title
@@ -7,4 +7,4 @@ class Tile {
   }
 }
 
-module.exports = Tile;
+module.exports = TILE;
