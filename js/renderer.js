@@ -552,8 +552,8 @@ function toggleListIssues(list) {
     buildIssueList()
   }
 
-  function deleteIssue(issue) {
-    deleteListIssue(list, issue)
+  function deleteIssue(title, issue) {
+    deleteListIssue(list, title, issue)
     buildIssueList()
   }
 
@@ -587,7 +587,7 @@ function toggleListIssues(list) {
         appendChildren(issuelist,
           appendChildren(issueDiv,
             create('span', {textContent: txt, class: 'link', style: {marginLeft: '5px'}}, {'click': () => listItemClick(opts)}),
-            create('i', {class: ['fas', 'fa-trash-alt'], style: {float: 'right'}}, {'click': () => deleteIssue(issue.issue)}),
+            create('i', {class: ['fas', 'fa-trash-alt'], style: {float: 'right'}}, {'click': () => deleteIssue(issue.title, issue.issue)}),
             'return'
           ))
       })

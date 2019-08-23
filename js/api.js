@@ -67,10 +67,10 @@ function moveListIssues(db, drag, drop) {
   rewriteDB(db, newList)
 }
 
-function deleteListIssue(db, issue) {
+function deleteListIssue(db, title, issue) {
   const issues = getDB(db, {type: 'arr'})
 
-  const index = issues.findIndex( i => i.issue === issue)
+  const index = issues.findIndex( i => i.title === title && i.issue === issue)
   issues.splice(index, 1)
 
   const newList = issues.map( (i, ind) => {
