@@ -181,6 +181,7 @@ function search() {
       return
     } else if (e.channel === 'desc') {
       clearHidden()
+      qi('search-results').innerHTML = ''
       navigation('description', {link: e.args[0].link, cover: e.args[0].cover, section: 'search', view: 'd'})
       return
     } else if (e.channel === 'nf') {
@@ -521,6 +522,11 @@ function toggleListIssues(list) {
   let dragItem
 
   function listItemClick(opts) {
+
+    for (let key in opts) {
+      if (currentComic.hasOwnProperty(key) && opts.hasOwnProperty(key)) currentComic[key] = opts[key]
+    }
+
     navigation('comic', opts)
   }
 
@@ -830,6 +836,11 @@ function buildDescription(evt) {
 
     if (desc.children.length) desc.innerHTML = ''
 
+
+    if (evt.section === 'search') {
+      const coverImg = create('img', {src: comicCover, style: {height: '150px', width: '115px', marginLeft: '10px'}})
+      appendChildren(descContainer, coverImg)
+    }
     appendChildren(desc, titleHeader, secondaryBar, listContainer, descContainer)
 
     // Build issues

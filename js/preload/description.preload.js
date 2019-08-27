@@ -23,7 +23,6 @@ function onload() {
     'summary': 'poop',
     'writer': []
   }
-
   // Gets all the specific data to build the description info
   info.forEach(item => {
     if (!item.children.length && item.textContent) data.summary = item.textContent
