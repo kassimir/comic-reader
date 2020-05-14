@@ -1,9 +1,10 @@
 const fs = require('fs')
 const send = require('./utils').send
 
-// opts: type: array or object
-// createNew: bool => creates new if db doesn't exist
-// returnNew: bool => returns "blank" if nothing found
+// opts:
+//   type: array or object
+//   createNew: bool => creates new if db doesn't exist
+//   returnNew: bool => returns "blank" if nothing found
 function getDB(db, opts = {type: 'obj', createNew: true, returnNew: true}) {
   const dbPath = `./database/${db}.database.json`
   const newVal = opts.type === 'obj' ? {} : []
@@ -25,8 +26,8 @@ function deleteGroupDB(sectionID) {
 
   const groupsDB = getDB('groups', {type: 'arr'})
   groupsDB.splice(groupsDB.findIndex( g => g.sectionID === sectionID), 1)
-  rewriteDB('groups', groupsDB)
   fs.unlinkSync(dbpath)
+  rewriteDB('groups', groupsDB)
 }
 
 function createIssueList(db) {
@@ -36,10 +37,10 @@ function createIssueList(db) {
   fs.writeFileSync(`./database/${db}.database.json`, `[]`)
 }
 
-function addIssuesToListDB(db, title, issue, link) {
+function addIssuesToListDB(db, title, issue, link, cover) {
   const ilist = getDB(db, {type: 'arr', createNew: false})
   const position = ilist.length
-  ilist.push({title, issue, link, position})
+  ilist.push({title, cover, issue, link, position})
   rewriteDB(db, ilist)
 }
 
@@ -84,16 +85,21 @@ function deleteListFromDB(db) {
   const issueslist = getDB('lists')
   const index = issueslist.findIndex(i => i === db)
   issueslist.splice(index, 1)
+  fs.unlinkSync(`./database/${db}.database.json`)
   rewriteDB('lists', issueslist)
 }
 
-// Writes to "database"
+// Writes to recent "database"
 // TODO: utilize a model
 function writeRecent(comic, link) {
+  // Older version of app didn't put these into the LIST database,
+  // and this will keep from fucking over the Recent section
+  if (!comic.cover || !comic.link) return
+
   const recentDB = JSON.parse(fs.readFileSync('./database/recent.database.json').toString())
   const l = Object.keys(recentDB).length
   if (!recentDB[comic.title]) {
-    recentDB[comic.title] = {position: l, link: comic.link, cover: comic.cover, issues: {[comic.issue] : link}}
+    recentDB[comic.title] = {position: l, link: comic.link, cover: comic.cover, issues: {[comic.issue]: link}}
   } else {
     recentDB[comic.title].issues[comic.issue] = link
     recentDB[comic.title].position = l
@@ -108,10 +114,8 @@ function writeRecent(comic, link) {
     sortedRecent.forEach( c => {
       newCurrentList[c] = recentDB[c]
     })
-
-    send({type: 'recent', data: newCurrentList}, 'update', 'r')
-
-  } else send({type: 'recent', data: recentDB}, 'update', 'r')
+    rewriteDB('recent', newCurrentList)
+  } else rewriteDB('recent', recentDB)
 }
 
 function readDB(db) {

@@ -6,6 +6,11 @@ This is an Electron-based program to read comic books from http://readcomiconlin
 
 That being said, I've actually picked up books that I normally never would have bought, simply because I read them for free and decided to add them to my collection.
 
+Bug!
+0) X-Men: Endangered Species TPB (Part 1): that combo needs added to the issues list!
+
 List of things to complete (in no particular order):
-1) Lists for reading orders
-2) Error handling for things like no internet or for the preloads not returning anything in a timely fashion
+0) Automatic updates
+0) Database for in-comic ads
+0) Shareable link / ability to open from link
+0) Error handling for things like no internet or for the preloads not returning anything in a timely fashion

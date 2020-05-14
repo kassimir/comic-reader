@@ -6,7 +6,10 @@ const ipcMain = require('electron').ipcMain
    a million times, so I wrote my own selector functions.
  */
 
-const q = ele => document.querySelectorAll(ele).length > 1 ? document.querySelectorAll(ele) : document.querySelector(ele)
+const q = (ele, opts = {retType: 'node'}) => {
+  if (opts.retType === 'node') return document.querySelectorAll(ele).length > 1 ? document.querySelectorAll(ele) : document.querySelector(ele)
+  else return Array.from(document.querySelectorAll(ele).length > 1 ? document.querySelectorAll(ele) : document.querySelector(ele))
+}
 const qi = id => document.getElementById(id)
 const qc = cls => document.getElementsByClassName(cls).length > 1 ? document.getElementsByClassName(cls) : document.getElementsByClassName(cls)[0]
 

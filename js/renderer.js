@@ -30,6 +30,7 @@ const TILE = require('./js/models/tile.model')
 const COMIC = require('./js/models/comic.model')
 const fs = require('fs')
 const ipc = require('electron').ipcRenderer
+const clipboard = require('electron').clipboard
 
 // Hidden div for rendering pages in the background
 const hidden = qi('hidden')
@@ -52,7 +53,6 @@ if (!navigator.onLine) {
   window.onload = mainRender
 }
 
-
 // This is the object from which the main page will be built
 const frontPage = {
   latest: {},
@@ -63,12 +63,7 @@ const frontPage = {
   mostpopular: {}
 }
 
-const currentComic = {
-  title: '',
-  cover: '',
-  link: '',
-  issue: ''
-}
+const currentComic = new COMIC()
 
 let comicTitle
 
@@ -76,7 +71,7 @@ let comicTitle
 // check every issue for being in a group, so I'm creating an array
 // of issue titles instead and a correlating list of what group it's in.
 let GROUPS = getDB('groups', {type: 'arr'}), GROUP_ISSUE_ARRAY = []
-
+// Same thing but for Lists
 let LISTS = getDB('lists', {type: 'arr'})
 
 // INSERTING SMALL PATCH FOR BACKWARDS COMPATIBILITY
@@ -85,7 +80,9 @@ let recentDB, readingDB
 
 // This is the database for the Reading List
 if (fs.existsSync('./database/reading.database.json')) {
-  readingDB = JSON.parse(fs.readFileSync('./database/reading.database.json').toString())
+  readingDB = getDB('reading', {createNew: false})
+  // This is the backwards compatibility part.
+  // If there are some without
   const dates = Object.keys(readingDB).some( o => readingDB[o].date)
   if (dates) {
     readingDB = updateDBOld(readingDB)
@@ -96,7 +93,6 @@ if (fs.existsSync('./database/reading.database.json')) {
   fs.writeFileSync('./database/reading.database.json', '{}', {flag: 'w'})
   readingDB = {}
 }
-
 
 // This is the database for Most Recently Read
 if (fs.existsSync('./database/recent.database.json')) recentDB = JSON.parse(fs.readFileSync('./database/recent.database.json').toString())
@@ -127,7 +123,7 @@ function updateDBOld(db) {
 }
 
 
-let descNode, issueNode, groupsNode, iframeTO, loaded = false
+let iframeTO, loaded = false
 
 // This is for the previous and next button once the comic is loaded
 // I may not need them to be global, but that's where I'm putting them
@@ -148,6 +144,8 @@ function loadCommit() {
 }
 
 function search() {
+  // ipc.send('close')
+  // return
   loader('start', false)
 
   scrollSection('search')
@@ -226,10 +224,24 @@ function search() {
 
 // STEP ONE:
 // Navigate to the site, then steal its front page
-function mainRender() {
+/*
+/////////// Trying to save reading progress
+const currentScroll = reader.scrollTop
+  const sectionScroll = section === 'search' ? 0 : section.offsetTop - 65
 
-  readingDB = JSON.parse(fs.readFileSync('./database/reading.database.json').toString())
-  recentDB = JSON.parse(fs.readFileSync('./database/recent.database.json').toString())
+  if (sectionScroll <= currentScroll - 5) {
+    reader.scrollTop -= 3
+    setTimeout(scrollSection, 0, section)
+  } else if (sectionScroll >= currentScroll + 5) {
+    reader.scrollTop += 3
+    setTimeout(scrollSection, 0, section)
+  } else if (sectionScroll < currentScroll || sectionScroll > currentScroll) {
+    reader.scrollTop = sectionScroll
+  }
+ */
+function mainRender() {
+  readingDB = getDB('reading', {createNew: false})
+  recentDB = getDB('recent', {createNew: false})
 
   // Hide the Home and download button, if it is showing
   if (qi('home-download').style.visibility === 'visible') rebuild()
@@ -273,7 +285,7 @@ function mainRender() {
     qi('recent').style.display = 'block'
     // Sort by position number
     const sortedRecent = Object.keys(recentDB).sort((a, b) => {
-      return new Date(recentDB[b].date) - new Date(recentDB[a].date)
+      return new Date(recentDB[b].position) - new Date(recentDB[a].position)
     })
 
     sortedRecent.forEach( c => {
@@ -283,10 +295,8 @@ function mainRender() {
   } else qi('recent-text').style.display = 'none'
 
   // Reading List
-  // I should really get rid of this, but I'm leaving it for backwards compatibility.
-  // Once all comics are removed from here, it will disappear anyway, so no harm no foul
   if (Object.keys(readingDB).length) {
-    qi('recent-text').style.display = 'flex'
+    qi('reading-text').style.display = 'flex'
     qi('reading').style.display = 'flex'
     const sortedReading = Object.keys(readingDB).sort((a, b) => {
       return readingDB[b].position - readingDB[a].position
@@ -312,24 +322,8 @@ function mainRender() {
     loader('start', true)
     qi('home-download').style.visibility = 'hidden'
     if (qi('comic')) document.body.removeChild(qi('comic'))
-    q('#recent .carousel-inner').innerHTML = ''
-    q('#reading .carousel-inner').innerHTML = ''
-    q('#latest .carousel-inner').innerHTML = ''
-    q('#newest .carousel-inner').innerHTML = ''
-    q('#topday .carousel-inner').innerHTML = ''
-    q('#topmonth .carousel-inner').innerHTML = ''
-    q('#topweek .carousel-inner').innerHTML = ''
-    q('#mostview .carousel-inner').innerHTML = ''
-    q('#recent-desc').innerHTML = ''
-    q('#reading-desc').innerHTML = ''
-    q('#latest-desc').innerHTML = ''
-    q('#newest-desc').innerHTML = ''
-    q('#topday-desc').innerHTML = ''
-    q('#topmonth-desc').innerHTML = ''
-    q('#topweek-desc').innerHTML = ''
-    q('#mostview-desc').innerHTML = ''
-    q('#search-results').innerHTML = ''
-    q('#search-desc').innerHTML = ''
+    q('.carousel-inner', {retType: 'array'}).forEach(e => e.innerHTML = '')
+    q('div[id*="-desc"]', {retType: 'array'}).forEach(e => e.innerHTML = '')
     q('#paginate').style.display = 'none'
     q('#search').style.display = 'block'
     q('#title').textContent = ''
@@ -338,6 +332,8 @@ function mainRender() {
 }
 
 function buildTile(tile, section, first, position = 0) {
+  let defaultImage = false;
+  const defaultImageTO = setTimeout(() => defaultImage = true, 20000)
   const sect = section.replace(/(tab|-)/g, '')
   const comicDiv = qi(`${sect}`).querySelector('.carousel-inner')
 
@@ -352,6 +348,7 @@ function buildTile(tile, section, first, position = 0) {
     },
     {
       'error': onerr,
+      'load': onload,
       'click': () => navigation('description', {link: tile.link, section: sect, cover: tile.img, view: 'i'})
     }
   )
@@ -388,7 +385,16 @@ function buildTile(tile, section, first, position = 0) {
   // legitimate error (like a 404), it will try into oblivion
   // TODO: Set a default image after x amount of tries
   function onerr(e) {
-    setTimeout(() => e.target.src = e.target.currentSrc, 2000)
+    if (!defaultImage) setTimeout(() => e.target.src = e.target.currentSrc, 2000)
+    else {
+      e.target.src = 'https://i.imgur.com/T1I1PZa.jpg'
+      e.target.style.width = '20vw'
+      e.target.style.height = 'auto'
+    }
+  }
+
+  function onload() {
+    clearTimeout(defaultImageTO)
   }
 }
 
@@ -405,17 +411,19 @@ function defaultSection(sect) {
 
 // Building groups
 function buildGroups(add) {
+
   if (!GROUPS.length) return
 
   if (add) {
-    buildSection(add.group)
+    buildSection(add.group, 1)
     return
   }
 
   GROUPS.forEach( group => {
     if (!group.hasOwnProperty('sectionID') || !group.hasOwnProperty('sectionTitle')) return
+    if (q(`#${group.sectionID}`)) return
 
-    buildSection(group)
+    buildSection(group, 2)
 
     const database = readDB(group.sectionID)
     const sortedDB = Object.keys(database).sort((a, b) => {
@@ -577,7 +585,8 @@ function toggleListIssues(list) {
         const opts = {
           title: issue.title,
           issue: issue.issue,
-          link: issue.link
+          link: issue.link,
+          cover: issue.cover
         }
 
         const issueDiv = create('div',
@@ -669,9 +678,15 @@ function buildDescription(evt) {
   loader('start')
   //Scroll the selected section to the top of the page in a fancy slow move
   if (evt.section !== 'search' && evt.section !=='mostview') scrollSection(qi(`${evt.section}`))
-
   const descId = `${evt.section}-desc`
-  const comicLink = evt.link
+  const comicLink = (() => {
+    const lnk = evt.link.split('/')
+    const lst = lnk[lnk.length - 1]
+    if (lst.includes('Issue-') && lst.includes('?id=')) {
+      lnk.splice(lnk.length - 1)
+    }
+    return lnk.join('/')
+  })()
   const view = evt.view ? evt.view : 'i'
 
   let desc
@@ -797,7 +812,7 @@ function buildDescription(evt) {
       appendChildren(listContainer, empty)
     } else {
       LISTS.forEach( l => {
-        const a = create('span', {textContent: l, class: 'link'}, {'click': () => addIssuesToList(l, descArgs.title)})
+        const a = create('span', {textContent: l, class: 'link'}, {'click': () => addIssuesToList(l, descArgs.title, descArgs.cover)})
         appendChildren(listContainer, a)
       })
     }
@@ -1033,7 +1048,7 @@ function toggleAllIssueChecks(type) {
   })
 }
 
-function addIssuesToList(db, title) {
+function addIssuesToList(db, title, cover) {
   const inputs = q('input[type="checkbox"]')
 
   if (!inputs && !inputs.length) {
@@ -1043,12 +1058,12 @@ function addIssuesToList(db, title) {
 
   if (!inputs.length) {
     const issue = inputs.nextElementSibling
-    addIssuesToListDB(db, title, issue.textContent, issue.dataset.link)
+    addIssuesToListDB(db, title, issue.textContent, issue.dataset.link, cover)
   } else {
     inputs.forEach( c => {
       if (c.checked) {
         const issue = c.nextElementSibling
-        addIssuesToListDB(db, title, issue.textContent, issue.dataset.link)
+        addIssuesToListDB(db, title, issue.textContent, issue.dataset.link, cover)
       }
     })
   }
@@ -1099,7 +1114,8 @@ function createUniqueID() {
     if (GROUPS[prop].sectionID === sectionID) uniqueID = false
   }
 
-  if (!uniqueID) return addGroup()
+  if (!uniqueID) return createUniqueID()
+  else return sectionID
 }
 
 function titleMenuToggle(sectionId) {
@@ -1229,7 +1245,7 @@ function buildComic(evt) {
   // Set up Home and download button
 
   qi('home-download').style.visibility = 'visible'
-  qi('lists').style.width = '0'
+  showLists('closed')
 
   // TODO: This will show/hide the download button based on the downloaded database
   // TODO: Unfortunately it doesn't take into account locally deleting the files, since
@@ -1322,7 +1338,7 @@ function rightClickMenu(coords = {target: null, x: 0, y: 0}) {
       left: x + 'px',
       top: y + 'px',
       width: '85px',
-      height: '38px',
+      height: '57px',
       backgroundColor: 'white',
       border: '1px solid black',
       color: 'black',
@@ -1345,14 +1361,23 @@ function rightClickMenu(coords = {target: null, x: 0, y: 0}) {
     style: {
       width: '100%',
       height: '18px',
+      borderBottom: '1px solid black',
       fontSize: '12px',
       margin: 0,
       paddingTop: '1px'
   }}, {'click': () => rotate('r')})
+  const copyImage = create('p', {class: 'link',
+    style: {
+      width: '100%',
+      height: '18px',
+      fontSize: '12px',
+      margin: 0,
+      paddingTop: '1px'
+  }}, {'click': () => imageCopy(target.src)})
   left.innerText = 'Rotate Left'
   right.innerText = 'Rotate Right'
-  div.appendChild(left)
-  div.appendChild(right)
+  copyImage.innerText = 'Copy Image'
+  appendChildren(div, left, right, copyImage)
   q('body').appendChild(div)
 
   function rotate(dir) {
@@ -1379,11 +1404,24 @@ function rightClickMenu(coords = {target: null, x: 0, y: 0}) {
         s.height = window.innerWidth + 'px'
       }
     } else {
-      console.log('elsing')
       s.width = '100%'
       s.height = 'auto'
     }
 
+  }
+
+  function imageCopy(link) {
+    const fs = require('fs'),
+      request = require('request'),
+      image = require('electron').nativeImage
+
+    request.head(link, () => {
+      request(uri).pipe(fs.createWriteStream('temp.png')).on('close', () => {
+        const i = image.createFromPath('temp.png')
+        clipboard.writeImage(i)
+        fs.unlink('temp.png')
+      })
+    });
   }
 
   function checkAngles(r) {
@@ -1403,6 +1441,7 @@ function goToIssue(e) {
   navigation('comic', {link: e.target.value})
 }
 
+// TODO: Move this to api
 function download() {
   loader('start')
   const downloadedDB = JSON.parse(fs.readFileSync('./database/downloaded.database.json').toString())
@@ -1410,11 +1449,14 @@ function download() {
   downloadComic(currentComic)
 }
 
-function showLists() {
+function showLists(state) {
   const listDiv = qi('lists')
   listDiv.style.height = `${reader.offsetHeight - 62}px`
   if (!listDiv.style.width) listDiv.style.width = '0'
-  const [ lstyle, ltext, rstyle, gstyle ] =
+
+  if (state) qc('addGroup-icons').querySelector('div').style.visibility = state === 'open' ? 'visible' : 'hidden'
+
+  const [ lstyle, ltext, /* rstyle */, gstyle ] =
     qc('addGroup-icons').querySelector('div').style.visibility !== 'hidden'
     ? [ `400px`, 'Hide Lists', 'hidden', 'hidden' ]
     : [ '0', 'Show Lists', 'auto', 'visible']

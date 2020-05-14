@@ -21,7 +21,8 @@ function createWindow () {
     height: 1050,
     autoHideMenuBar: true,
     titleBarStyle: 'hidden',
-    icon: path.join(__dirname, 'favicon.ico')
+    icon: path.join(__dirname, 'favicon.ico'),
+    // frame: false
   })
 
   // and load the index.html of the app.
@@ -74,6 +75,10 @@ app.on('activate', function () {
   if (mainWindow === null) {
     createWindow()
   }
+})
+
+ipc.on('close', () => {
+  app.quit()
 })
 
 ipc.on('download', (e, a) => {
