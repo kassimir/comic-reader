@@ -7,7 +7,8 @@ const {
   create,
   getOrRemoveIssue: getIssue,
   sortIssues,
-  appendChildren
+  appendChildren,
+  compareDBs
 } = utils
 const {
   getDB,
@@ -24,7 +25,8 @@ const {
   deleteListIssue,
   deleteListFromDB,
   writeRecent,
-  downloadComic
+  downloadComic,
+  getDBsCloud
 } = api
 const TILE = require('./js/models/tile.model')
 const COMIC = require('./js/models/comic.model')
@@ -38,20 +40,13 @@ const hidden = qi('hidden')
 const reader = qi('reader')
 // Variable for the loader failsafe (failLoad)
 let loaderLoading, loaderTimeout
+// Cloud dbs
+let cloudDBs
 
-if (!navigator.onLine) {
-  // Go to download mode
-  q('.section-title').forEach(i => i.style.display = 'none')
-  q('.carousel-outer').forEach(i => i.style.display = 'none')
-  q('.downloaded').forEach(i => i.style.display = 'flex')
-  const downloadedDB = JSON.parse(fs.readFileSync('./database/downloaded.database.json').toString())
-  Object.keys(downloadedDB).forEach(key => {
-    buildTile(new TILE(key, `downloads/${key}/cover.jpg`, null), `downloaded`)
-  })
-} else {
-  loader('start', true)
-  window.onload = mainRender
-}
+// Get databases from cloud
+getDBsCloud()
+
+ipc.on('dbcloud', (e, a) => cloudDBs = JSON.parse(a))
 
 // This is the object from which the main page will be built
 const frontPage = {
@@ -75,7 +70,10 @@ let GROUPS = getDB('groups', {type: 'arr'}), GROUP_ISSUE_ARRAY = []
 let LISTS = getDB('lists', {type: 'arr'})
 
 // INSERTING SMALL PATCH FOR BACKWARDS COMPATIBILITY
-// After getting db's, check to see if they need date/position update
+// DBs used to have a date property, but it's been removed
+// in favor of a position property. This checks to see if
+// the database has been updated to the current way of
+// reading/sorting database items, then fixes them, if needed
 let recentDB, readingDB
 
 // This is the database for the Reading List
@@ -92,6 +90,20 @@ if (fs.existsSync('./database/reading.database.json')) {
   if (!fs.existsSync('./database')) fs.mkdirSync('./database')
   fs.writeFileSync('./database/reading.database.json', '{}', {flag: 'w'})
   readingDB = {}
+}
+
+if (!navigator.onLine) {
+  // Go to download mode
+  q('.section-title').forEach(i => i.style.display = 'none')
+  q('.carousel-outer').forEach(i => i.style.display = 'none')
+  q('.downloaded').forEach(i => i.style.display = 'flex')
+  const downloadedDB = JSON.parse(fs.readFileSync('./database/downloaded.database.json').toString())
+  Object.keys(downloadedDB).forEach(key => {
+    buildTile(new TILE(key, `downloads/${key}/cover.jpg`, null), `downloaded`)
+  })
+} else {
+  loader('start', true)
+  window.onload = mainRender
 }
 
 // This is the database for Most Recently Read
@@ -240,12 +252,36 @@ const currentScroll = reader.scrollTop
   }
  */
 function mainRender() {
+  // Wait for the databases to come back from the cloud
+  if (!cloudDBs) return setTimeout(mainRender, 1000)
+  // Get local reading and recent
   readingDB = getDB('reading', {createNew: false})
   recentDB = getDB('recent', {createNew: false})
 
+  // Compare Reading
+  if (!compareDBs(cloudDBs.reading, readingDB)) {
+    // rewriteDB('reading', cloudDBs.reading)
+    // readingDB = Object.assign({}, cloudDBs.reading)
+  }
+  // Compare Recent
+  if (!compareDBs(cloudDBs.recent, recentDB)) {
+    // rewriteDB('recent', cloudDBs.recent)
+    // recentDB = Object.assign({}, cloudDBs.recent)
+  }
+  // Check all groups
+  if (cloudDBs.groups && cloudDBs.groups.length) {
+
+  } else if (getDB('groups').length) {
+    Object.keys(getDB('groups')).forEach( g => {
+      deleteGroupDB(g)
+    })
+  }
+
+  // return
   // Hide the Home and download button, if it is showing
   if (qi('home-download').style.visibility === 'visible') rebuild()
   if (qi('lists').style.display === 'none') qi('lists').style.display = 'block'
+  if (qi('title-buttons').style.visibility === 'hidden') qi('title-buttons').style.visibility = 'visible'
 
   function ipcMessage(e) {
     switch (e.channel) {
@@ -411,7 +447,7 @@ function defaultSection(sect) {
 
 // Building groups
 function buildGroups(add) {
-
+console.log('build groups: ', GROUPS.length)
   if (!GROUPS.length) return
 
   if (add) {
@@ -1245,6 +1281,7 @@ function buildComic(evt) {
   // Set up Home and download button
 
   qi('home-download').style.visibility = 'visible'
+  qi('title-buttons').style.visibility = 'hidden'
   showLists('closed')
 
   // TODO: This will show/hide the download button based on the downloaded database

@@ -1,5 +1,6 @@
 const fs = require('fs')
 const send = require('./utils').send
+const http = require('http');
 
 // opts:
 //   type: array or object
@@ -209,6 +210,45 @@ function downloadComic(comic) {
   send({comic: comic, images: images, data: downloadedDB}, 'download', 'r')
 }
 
+function getDBsCloud() {
+  let data = ''
+  const options = {
+    host: 'storbies.com',
+    port: 80,
+    path: '/cbr?user=test',
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    }
+  }
+
+  http.get(options, response => {
+    response.on('data', chunk => {
+      data += chunk
+    });
+    response.on('end', () => {
+      console.log('dbcloud: ', data)
+      send(data, 'dbcloud', 'r')
+    })
+  })
+}
+
+function saveDBsCloud() {
+  const options = {
+    host: 'cbr.eadpool.com',
+    port: 80,
+    path: '/databases',
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Content-Length': Buffer.byteLength(data)
+    }
+  }
+
+  const r = http.request(options)
+  r.write(readDB('idunno'))
+}
+
 module.exports = {
   getDB: getDB,
   readDB: readDB,
@@ -224,5 +264,7 @@ module.exports = {
   deleteListIssue: deleteListIssue,
   deleteListFromDB: deleteListFromDB,
   writeRecent: writeRecent,
-  downloadComic: downloadComic
+  downloadComic: downloadComic,
+  getDBsCloud: getDBsCloud,
+  saveDBsCloud: saveDBsCloud
 }

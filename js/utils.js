@@ -181,6 +181,30 @@ function appendChildren(parent, ...children) {
   if (ret) return parent
 }
 
+function compareDBs(db1, db2) {
+  console.log('db1: ', db1)
+  console.log('db2: ', db2)
+  if (
+    !db1
+    || !db2
+    || Object.keys(db1).length !== Object.keys(db2).length
+  ) return false
+
+  return compareShallow(db1, db2)
+
+  function compareShallow(obj1, obj2) {
+    Object.keys(obj1).forEach( key => {
+      if (
+        (typeof obj1[key] !== typeof obj2[key])
+        || (typeof obj1[key] !== 'object' && typeof obj1[key] !== 'object' && obj1[key] !== obj2[key])
+      ) return false
+      else if (typeof obj1[key] === 'object') return compareShallow(obj1[key], obj2[key])
+    })
+
+    return true
+  }
+}
+
 module.exports = {
   q: q,
   qi: qi,
@@ -189,5 +213,6 @@ module.exports = {
   create: create,
   getOrRemoveIssue: getOrRemoveIssue,
   sortIssues: sortIssues,
-  appendChildren: appendChildren
+  appendChildren: appendChildren,
+  compareDBs: compareDBs
 }

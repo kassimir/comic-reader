@@ -22,7 +22,7 @@ function createWindow () {
     autoHideMenuBar: true,
     titleBarStyle: 'hidden',
     icon: path.join(__dirname, 'favicon.ico'),
-    // frame: false
+    frame: false
   })
 
   // and load the index.html of the app.
@@ -43,7 +43,7 @@ function createWindow () {
     path = undefined;
   `);
   // Open the DevTools.
-  // mainWindow.webContents.openDevTools()
+  mainWindow.webContents.openDevTools()
 
   // Emitted when the window is closed.
   mainWindow.on('closed', function () {
@@ -100,4 +100,8 @@ ipc.on('download', (e, a) => {
       request(uri).pipe(fs.createWriteStream(filename)).on('close', callback);
     });
   })
+})
+
+ipc.on('dbcloud', (e, a) => {
+  mainWindow.webContents.send('dbcloud', a)
 })

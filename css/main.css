@@ -41,17 +41,51 @@ form {
     overflow: hidden;
 }
 
-#nav {
+#nav, #titlebar {
     position: absolute;
-    top: 0;
     left: 0;
     right: 0;
-    height: 55px;
     /*background: linear-gradient(#c60229, #6C0722, #660620, #63061F, #5E051D);*/
-    background: linear-gradient(to bottom, #e90335 0%,#c60229 44%,#920223 100%);
     display: flex;
     justify-content: space-between;
     align-items: center;
+}
+
+#nav {
+    top: 15px;
+    background: linear-gradient(to bottom, #e90335 0%,#c60229 44%,#920223 100%);
+    height: 55px;
+}
+
+#titlebar {
+    top: 0;
+    background-color: #e90335;
+    height: 15px;
+    font-size: 12px;
+    -webkit-app-region: drag;
+}
+
+#title-buttons {
+    margin-left: 5px;
+    padding-right: 5px;
+}
+
+#title-buttons p {
+    display: inline;
+}
+
+#title-buttons .fa-download {
+    position: relative;
+    top: 2px;
+    left: -2px;
+}
+
+#window-buttons {
+    margin-right: 5px;
+}
+
+#titlebar .fas {
+    padding-left: 5px;
 }
 
 #search, #paginate {
@@ -312,7 +346,7 @@ form {
 
 .reader-view {
     position: absolute;
-    top: 55px;
+    top: 70px;
     left: 0;
     right: 0;
     bottom: 0;
