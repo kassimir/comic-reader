@@ -62,12 +62,18 @@ form {
     background-color: #e90335;
     height: 15px;
     font-size: 12px;
+}
+
+#title-notification {
+    width: 80%;
+    height: 15px;
     -webkit-app-region: drag;
 }
 
 #title-buttons {
     margin-left: 5px;
     padding-right: 5px;
+    width: 10%;
 }
 
 #title-buttons p {
@@ -82,6 +88,8 @@ form {
 
 #window-buttons {
     margin-right: 5px;
+    width: 10%;
+    text-align: right;
 }
 
 #titlebar .fas {

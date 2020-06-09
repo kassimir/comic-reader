@@ -8,7 +8,8 @@ const {
   getOrRemoveIssue: getIssue,
   sortIssues,
   appendChildren,
-  compareDBs
+  compareDBs,
+  send
 } = utils
 const {
   getDB,
@@ -155,9 +156,19 @@ function loadCommit() {
   }, 2000)
 }
 
+function winAction(action) {
+  if (action === 'restore') {
+    q('.fa-window-maximize').style.display = 'inline'
+    q('.fa-window-restore').style.display = 'none'
+  }
+  if (action === 'maximize') {
+    q('.fa-window-maximize').style.display = 'none'
+    q('.fa-window-restore').style.display = 'inline'
+  }
+  send(action, '', 'r')
+}
+
 function search() {
-  // ipc.send('close')
-  // return
   loader('start', false)
 
   scrollSection('search')
@@ -234,6 +245,16 @@ function search() {
   bgRender(`http://readcomiconline.to/Search/Comic?keyword=${keyword}`, 'js/preload/search.preload.js', {'ipc-message': ipcMessage})
 }
 
+function sync(dir) {
+  if (dir === 'down') {
+    // rewriteDB('reading', cloudDBs.reading)
+    // readingDB = Object.assign({}, cloudDBs.reading)
+    // rewriteDB('recent', cloudDBs.recent)
+    // recentDB = Object.assign({}, cloudDBs.recent)
+    // if (compareDBs(GROUPS, cloudDBs))
+  }
+}
+
 // STEP ONE:
 // Navigate to the site, then steal its front page
 /*
@@ -258,26 +279,18 @@ function mainRender() {
   readingDB = getDB('reading', {createNew: false})
   recentDB = getDB('recent', {createNew: false})
 
-  // Compare Reading
-  if (!compareDBs(cloudDBs.reading, readingDB)) {
-    // rewriteDB('reading', cloudDBs.reading)
-    // readingDB = Object.assign({}, cloudDBs.reading)
-  }
-  // Compare Recent
-  if (!compareDBs(cloudDBs.recent, recentDB)) {
-    // rewriteDB('recent', cloudDBs.recent)
-    // recentDB = Object.assign({}, cloudDBs.recent)
-  }
-  // Check all groups
-  if (cloudDBs.groups && cloudDBs.groups.length) {
+  let outOfSync = false
 
-  } else if (getDB('groups').length) {
-    Object.keys(getDB('groups')).forEach( g => {
-      deleteGroupDB(g)
-    })
+  if (
+    !compareDBs(cloudDBs.reading, readingDB)
+    || !compareDBs(cloudDBs.recent, recentDB)
+    || cloudDBs.groups.length !== GROUPS.length
+  ) outOfSync = true
+
+  if (outOfSync) {
+    q('#title-notification').textContent = 'Your local databases are out of sync with the cloud.'
   }
 
-  // return
   // Hide the Home and download button, if it is showing
   if (qi('home-download').style.visibility === 'visible') rebuild()
   if (qi('lists').style.display === 'none') qi('lists').style.display = 'block'

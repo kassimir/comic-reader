@@ -30,11 +30,12 @@
         <p>test</p>
         <i class="fas fa-upload"></i>
       </div>
-      <div class="title-notification"></div>
+      <div id="title-notification"></div>
       <div id="window-buttons">
-        <i class="fas fa-window-minimize"></i>
-        <i class="fas fa-window-maximize"></i>
-        <i class="fas fa-window-close"></i>
+        <i class="fas fa-window-minimize" onclick="winAction('minimize')"></i>
+        <i class="fas fa-window-maximize" onclick=" winAction('maximize')"></i>
+        <i class="fas fa-window-restore" onclick=" winAction('restore')" style="display: none;"></i>
+        <i class="fas fa-window-close" onclick=" winAction('close')"></i>
       </div>
     </div>
     <div id="nav">

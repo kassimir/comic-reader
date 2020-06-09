@@ -81,6 +81,18 @@ ipc.on('close', () => {
   app.quit()
 })
 
+ipc.on('maximize', () => {
+  mainWindow.maximize()
+})
+
+ipc.on('minimize', () => {
+  mainWindow.minimize()
+})
+
+ipc.on('restore', () => {
+  mainWindow.restore()
+})
+
 ipc.on('download', (e, a) => {
   const { comic, images, data } = a
 

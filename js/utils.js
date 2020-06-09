@@ -182,8 +182,6 @@ function appendChildren(parent, ...children) {
 }
 
 function compareDBs(db1, db2) {
-  console.log('db1: ', db1)
-  console.log('db2: ', db2)
   if (
     !db1
     || !db2

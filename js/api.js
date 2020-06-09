@@ -227,7 +227,6 @@ function getDBsCloud() {
       data += chunk
     });
     response.on('end', () => {
-      console.log('dbcloud: ', data)
       send(data, 'dbcloud', 'r')
     })
   })
