@@ -15,8 +15,8 @@ let mainWindow
 function createWindow () {
   // Create the browser window.
   mainWindow = new BrowserWindow({
-    x: -7,
-    y: 0,
+    x: 389,
+    y: 261,
     width: 1200,
     height: 1050,
     autoHideMenuBar: true,
@@ -70,29 +70,17 @@ app.on('window-all-closed', function () {
 })
 
 app.on('activate', function () {
-  // On OS X it's common to re-create a window in the app when the
+  // On OS X it's common to re-create a w indow in the app when the
   // dock icon is clicked and there are no other windows open.
   if (mainWindow === null) {
     createWindow()
   }
 })
 
-ipc.on('close', () => {
-  app.quit()
-})
-
-ipc.on('maximize', () => {
-  mainWindow.maximize()
-})
-
-ipc.on('minimize', () => {
-  mainWindow.minimize()
-})
-
-ipc.on('restore', () => {
-  mainWindow.restore()
-})
-
+ipc.on('close', () => app.quit())
+ipc.on('maximize', () => mainWindow.maximize())
+ipc.on('minimize', () => mainWindow.minimize())
+ipc.on('restore', () => mainWindow.restore())
 ipc.on('download', (e, a) => {
   const { comic, images, data } = a
 

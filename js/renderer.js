@@ -21,13 +21,15 @@ const {
   createGroup,
   deleteGroupDB,
   createIssueList,
+  deleteListDB,
   addIssuesToListDB,
   moveListIssues,
   deleteListIssue,
   deleteListFromDB,
   writeRecent,
   downloadComic,
-  getDBsCloud
+  getDBsCloud,
+  saveDBsCloud
 } = api
 const TILE = require('./js/models/tile.model')
 const COMIC = require('./js/models/comic.model')
@@ -43,11 +45,13 @@ const reader = qi('reader')
 let loaderLoading, loaderTimeout
 // Cloud dbs
 let cloudDBs
+// Variable for sync
+let outOfSync = false
 
 // Get databases from cloud
 getDBsCloud()
 
-ipc.on('dbcloud', (e, a) => cloudDBs = JSON.parse(a))
+ipc.on('dbcloud', (e, a) => cloudDBs = a.data)
 
 // This is the object from which the main page will be built
 const frontPage = {
@@ -66,9 +70,10 @@ let comicTitle
 // After creating groups, it was going to become very expensive to
 // check every issue for being in a group, so I'm creating an array
 // of issue titles instead and a correlating list of what group it's in.
-let GROUPS = getDB('groups', {type: 'arr'}), GROUP_ISSUE_ARRAY = []
+let GROUPS = getDB('groups', {type: 'arr', createNew: true, returnNew: true}), GROUP_ISSUE_ARRAY = []
+
 // Same thing but for Lists
-let LISTS = getDB('lists', {type: 'arr'})
+let LISTS = getDB('lists', {type: 'arr', createNew: true, returnNew: true})
 
 // INSERTING SMALL PATCH FOR BACKWARDS COMPATIBILITY
 // DBs used to have a date property, but it's been removed
@@ -76,6 +81,8 @@ let LISTS = getDB('lists', {type: 'arr'})
 // the database has been updated to the current way of
 // reading/sorting database items, then fixes them, if needed
 let recentDB, readingDB
+
+// Keep
 
 // This is the database for the Reading List
 if (fs.existsSync('./database/reading.database.json')) {
@@ -165,7 +172,7 @@ function winAction(action) {
     q('.fa-window-maximize').style.display = 'none'
     q('.fa-window-restore').style.display = 'inline'
   }
-  send(action, '', 'r')
+  send('', action, 'r')
 }
 
 function search() {
@@ -245,14 +252,66 @@ function search() {
   bgRender(`http://readcomiconline.to/Search/Comic?keyword=${keyword}`, 'js/preload/search.preload.js', {'ipc-message': ipcMessage})
 }
 
+// For sync, instead of comparing the dbs and only rewriting the ones that are different
+// I decided to just rewite everything. Comparing dbs is computationally expensive; rewriting isn't
 function sync(dir) {
+
+  let tstmsg = ''
   if (dir === 'down') {
-    // rewriteDB('reading', cloudDBs.reading)
-    // readingDB = Object.assign({}, cloudDBs.reading)
-    // rewriteDB('recent', cloudDBs.recent)
-    // recentDB = Object.assign({}, cloudDBs.recent)
-    // if (compareDBs(GROUPS, cloudDBs))
-  }
+    // Rewrite Reading
+    rewriteDB('reading', cloudDBs.reading)
+    readingDB = Object.assign({}, cloudDBs.reading)
+    // Rewrite Recent
+    rewriteDB('recent', cloudDBs.recent)
+    recentDB = Object.assign({}, cloudDBs.recent)
+    // Check if groups are the same. If they are, rewrite them all
+    if (compareDBs(GROUPS, cloudDBs)) {
+      cloudDBs.groups.forEach(group => rewriteDB(group.sectionID, cloudDBs[group.sectionID]))
+    } else {
+      const checkedDBs = []
+      // If groups aren't the same, then loop through and find any that were deleted
+      // and rewrite any that weren't
+      GROUPS.forEach(group => {
+        if (!cloudDBs.groups.find(group => group.sectionID === group.sectionID)) deleteGroupDB(group)
+        else rewriteDB(group.sectionID, cloudDBs.groups[group])
+        checkedDBs.push(group.sectionID)
+      })
+      // If any new groups were created, then they would not show up in GROUPS
+      // Find any newly-created groups
+      const difference = cloudDBs.groups.filter(group => !checkedDBs.includes(group.sectionID))
+      if (difference.length) difference.forEach(group => {
+        console.log('group: ', group)
+        // Create them locally
+        createGroup(group.sectionID, group.sectionTitle)
+        // Rewrite the data
+        rewriteDB(group.sectionID, cloudDBs[group.sectionID])
+      })
+      GROUPS = [ ...cloudDBs.groups ]
+    }
+    // Now do the same thing with Lists. I was hoping to re-use code from Groups
+    // but Groups has nested objects, so... fuck it. Maybe I'll change it up later
+    if (compareDBs(LISTS, cloudDBs.lists)) {
+      cloudDBs.lists.forEach(list => rewriteDB(list, cloudDBs[list]))
+    } else {
+      const checked = []
+      LISTS.forEach(list => {
+        if (!cloudDBs.lists.includes(list)) deleteListDB(list)
+        else rewriteDB(list, cloudDBs[list])
+        checked.push(list)
+      })
+      const difference = cloudDBs.lists.filter(list => !checked.includes(list))
+      if (difference.length) difference.forEach( list => {
+        createIssueList(list)
+        rewriteDB(list, cloudDBs[list])
+      })
+      LISTS = [ ...cloudDBs.lists ]
+    }
+    tstmsg ='Databases successfully downloaded!'
+  } else if (dir === 'up') {
+    saveDBsCloud()
+  } else return // this should never happen, but why not have a failsafe, eh?
+  q('#title-notification').textContent = ''
+  mainRender(tstmsg)
 }
 
 // STEP ONE:
@@ -272,14 +331,14 @@ const currentScroll = reader.scrollTop
     reader.scrollTop = sectionScroll
   }
  */
-function mainRender() {
+function mainRender(msg = '') {
   // Wait for the databases to come back from the cloud
   if (!cloudDBs) return setTimeout(mainRender, 1000)
   // Get local reading and recent
   readingDB = getDB('reading', {createNew: false})
   recentDB = getDB('recent', {createNew: false})
 
-  let outOfSync = false
+  if (!compareDBs(cloudDBs.reading, readingDB))
 
   if (
     !compareDBs(cloudDBs.reading, readingDB)
@@ -287,9 +346,7 @@ function mainRender() {
     || cloudDBs.groups.length !== GROUPS.length
   ) outOfSync = true
 
-  if (outOfSync) {
-    q('#title-notification').textContent = 'Your local databases are out of sync with the cloud.'
-  }
+  if (outOfSync) q('#title-notification').textContent = 'Your local databases are out of sync with the cloud.'
 
   // Hide the Home and download button, if it is showing
   if (qi('home-download').style.visibility === 'visible') rebuild()
@@ -366,6 +423,8 @@ function mainRender() {
 
   // Build Lists
   buildLists()
+
+  if (msg) toast(msg)
 
   function rebuild() {
     loader('start', true)
@@ -460,7 +519,6 @@ function defaultSection(sect) {
 
 // Building groups
 function buildGroups(add) {
-console.log('build groups: ', GROUPS.length)
   if (!GROUPS.length) return
 
   if (add) {
@@ -560,6 +618,7 @@ function buildLists(name = '') {
 
 function removeIssueList(list) {
   deleteListFromDB(list)
+
   LISTS = getDB('lists')
   buildLists()
 }

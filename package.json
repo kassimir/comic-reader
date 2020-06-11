@@ -14,5 +14,8 @@
     "electron": "^1.8.4",
     "electron-builder": "^20.44.4",
     "request": "^2.88.0"
+  },
+  "dependencies": {
+    "axios": "^0.19.2"
   }
 }

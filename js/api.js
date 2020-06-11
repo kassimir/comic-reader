@@ -1,6 +1,8 @@
 const fs = require('fs')
+const path = require('path')
+
 const send = require('./utils').send
-const http = require('http');
+const axios = require('axios')
 
 // opts:
 //   type: array or object
@@ -8,10 +10,10 @@ const http = require('http');
 //   returnNew: bool => returns "blank" if nothing found
 function getDB(db, opts = {type: 'obj', createNew: true, returnNew: true}) {
   const dbPath = `./database/${db}.database.json`
-  const newVal = opts.type === 'obj' ? {} : []
+  const newVal = opts.type === 'obj' ? '{}' : '[]'
   if (!fs.existsSync(dbPath)) {
-    if (opts.createNew) fs.writeFileSync(dbPath, newVal)
-    if (opts.returnNew) return newVal
+    if (opts.createNew) fs.writeFileSync(dbPath, `${newVal}`)
+    if (opts.returnNew) return JSON.parse(newVal)
   } else return JSON.parse(fs.readFileSync(dbPath).toString())
 }
 
@@ -36,6 +38,10 @@ function createIssueList(db) {
   lists.push(db)
   rewriteDB('lists', lists)
   fs.writeFileSync(`./database/${db}.database.json`, `[]`)
+}
+
+function deleteListDB(title) {
+  fs.unlinkSync(`./database/${title}.database.json`)
 }
 
 function addIssuesToListDB(db, title, issue, link, cover) {
@@ -189,7 +195,7 @@ function rewriteDB(db, data) {
   if (!fd) return
 
   if (typeof data !== 'string') data = JSON.stringify(data)
-  fs.writeFileSync(dbpath, data)
+  fs.writeFileSync(dbpath, data, {flag: 'w'})
 }
 
 function downloadComic(comic) {
@@ -211,59 +217,55 @@ function downloadComic(comic) {
 }
 
 function getDBsCloud() {
-  let data = ''
-  const options = {
-    host: 'storbies.com',
-    port: 80,
-    path: '/cbr?user=test',
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded'
-    }
-  }
+  axios.get('http://storbies.com/cbr?user=test')
+    .then( res => send(res, 'dbcloud', 'r'))
+}
 
-  http.get(options, response => {
-    response.on('data', chunk => {
-      data += chunk
-    });
-    response.on('end', () => {
-      send(data, 'dbcloud', 'r')
+async function saveDBsCloud() {
+  const dir = path.join(__dirname, '..', '/database')
+
+  // await axios({
+  //   method: 'post',
+  //   url: 'http://storbies.com/cbr',
+  //   data: {
+  //     firstName: 'Fred',
+  //     lastName: 'Flintstone'
+  //   }
+  // })
+  await axios.get('http://storbies.com/cbr?user=test&wipe=true')
+  fs.readdir(dir, (err, filenames) => {
+    if (err) {
+      console.error(err)
+      return
+    }
+
+    filenames.forEach(function(filename) {
+      const content = JSON.parse(fs.readFileSync(path.join(dir, filename)).toString())
+      const dbname = filename.replace('.database.json', '')
+      if (dbname === 'downloaded') return
+
+      axios.post('http://storbies.com/cbr', { "dbname": dbname, "content": content})
     })
   })
 }
 
-function saveDBsCloud() {
-  const options = {
-    host: 'cbr.eadpool.com',
-    port: 80,
-    path: '/databases',
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'Content-Length': Buffer.byteLength(data)
-    }
-  }
-
-  const r = http.request(options)
-  r.write(readDB('idunno'))
-}
-
 module.exports = {
-  getDB: getDB,
-  readDB: readDB,
-  writeToDB: writeToDB,
-  rewriteDB: rewriteDB,
-  updateDB: updateDB,
-  deleteFromDB: deleteFromDB,
-  createGroup: createGroup,
-  deleteGroupDB: deleteGroupDB,
-  createIssueList: createIssueList,
-  addIssuesToListDB: addIssuesToListDB,
-  moveListIssues: moveListIssues,
-  deleteListIssue: deleteListIssue,
-  deleteListFromDB: deleteListFromDB,
-  writeRecent: writeRecent,
-  downloadComic: downloadComic,
-  getDBsCloud: getDBsCloud,
-  saveDBsCloud: saveDBsCloud
+  getDB,
+  readDB,
+  writeToDB,
+  rewriteDB,
+  updateDB,
+  deleteFromDB,
+  createGroup,
+  deleteGroupDB,
+  createIssueList,
+  deleteListDB,
+  addIssuesToListDB,
+  moveListIssues,
+  deleteListIssue,
+  deleteListFromDB,
+  writeRecent,
+  downloadComic,
+  getDBsCloud,
+  saveDBsCloud
 }
