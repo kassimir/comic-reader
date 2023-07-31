@@ -24,7 +24,7 @@ function onload() {
   comicList.forEach( (div, ind) => {
     const comic = {}
 
-    comic.title = ind + ': ' + div.innerText;
+    comic.title = div.innerText;
     comic.link = getURI(div.innerHTML);
     comic.index = ind;
 
