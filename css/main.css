@@ -167,12 +167,13 @@ form {
 
 .search-table {
     display: flex;
+    flex-direction: column;
     justify-content: space-between;
     padding: 0 20px;
     margin: 2px;
 }
 
-.search-table:hover {
+.search-table_item:hover {
     cursor: pointer;
     background-color: #c60229;
 }

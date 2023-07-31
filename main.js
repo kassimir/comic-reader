@@ -84,6 +84,8 @@ ipc.on('restore', () => mainWindow.restore())
 ipc.on('download', (e, a) => {
   const { comic, images, data } = a
 
+  comic.title = makeFriendly(comic.title);
+
   if (!fs.existsSync('downloads')) fs.mkdirSync('./downloads')
   if (!fs.existsSync(`downloads/${comic.title}`)) fs.mkdirSync(`./downloads/${comic.title}`)
   if (!fs.existsSync(`downloads/${comic.title}/${comic.issue}`)) fs.mkdirSync(`./downloads/${comic.title}/${comic.issue}`)
@@ -100,6 +102,14 @@ ipc.on('download', (e, a) => {
       request(uri).pipe(fs.createWriteStream(filename)).on('close', callback);
     });
   })
+
+  function makeFriendly(text) {
+    [/#/, /</, /\$/, /\+/, /%/, />/, /!/, /`/, /&/, /\*/, /\|/, /{/, /}/, /\?/, /"/, /=/, /\//, /:/, /\@/].forEach( reg => {
+      const r = new RegExp(reg);
+      text = text.replace(reg, '');
+    })
+    return text
+  }
 })
 
 ipc.on('dbcloud', (e, a) => {
