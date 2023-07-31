@@ -3,7 +3,7 @@ const send = require('../utils').send
 window.addEventListener('DOMContentLoaded', onload)
 
 function onload() {
-  const searchResults = document.querySelectorAll('.listing tbody')[0]
+  const searchResults = document.querySelector('.list-comic')
   if (!searchResults || !searchResults.innerHTML) {
     if (document.querySelector('.barContent').innerText.trim() !== 'Not found') setTimeout(onload, 1000)
     else send('', 'nf')
@@ -20,25 +20,26 @@ function onload() {
     return
   }
 
-  const tableColumns = searchResults.querySelectorAll('tr')
-
-  tableColumns.forEach( (t, ind) => {
-    if (ind < 2) return
-
+  const comicList = Array.from(searchResults.children);
+  comicList.forEach( (div, ind) => {
     const comic = {}
 
-    if (t.children.length === 2) {
-      if (t.children[0].children.length) {
-        comic.link = t.children[0].children[0].href
-        comic.title = t.children[0].children[0].textContent.trim()
-      }
-      if (t.children[1].children.length) {
-        comic.issues = t.children[1].children[0].textContent.trim()
-      } else {
-        comic.issues = t.children[1].textContent.trim()
-      }
-    }
+    comic.title = ind + ': ' + div.innerText;
+    comic.link = getURI(div.innerHTML);
+    comic.index = ind;
+
     send(comic)
-    if (ind === tableColumns.length - 1) send('', 'end')
+
+    if (ind === comicList.length - 1) send('', 'end')
+
+    function getURI(txt) {
+      const startHref = txt.match('href=').index + 6;
+      const endHref = txt.match('">\n').index;
+      return 'https://readcomiconline.to' + txt.slice(startHref, endHref);
+    }
   })
+}
+
+function log(...m) {
+  send(m.join(' '), 'msg')
 }

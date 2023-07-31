@@ -213,13 +213,12 @@ function search() {
       navigation('description', {link: e.args[0].link, cover: e.args[0].cover, section: 'search', view: 'd'})
       return
     } else if (e.channel === 'nf') {
-      console.log(e.args[0])
       clearHidden()
       navigation('description', {section: 'search', nf: true})
     }
     const comic = e.args[0]
 
-    if (!comic.link || !comic.title || !comic.issues) return
+    if (!comic.link || !comic.title) return
 
     const searchDiv = q('#search-results')
 
@@ -234,18 +233,12 @@ function search() {
     const titleSpan = create('span', {
       textContent: comic.title,
       style: {marginLeft: '10px'}
-    }, {'click': () => navigation('description', {section: 'search', link: comic.link, view: 'i'})})
-    const titleDiv = create('div')
-    const issueSpan = create('span', {textContent: comic.issues}, {
-      'click': () => navigation('description', {
-        section: 'search',
-        link: comic.link,
-        view: 'i'
-      })
-    })
+    }, {'click': () => navigation('description', {section: `search-item-${comic.index}`, link: comic.link, view: 'd'})})
+    const titleDiv = create('div', {class: 'search-table_item'})
+    const descDiv = create('div', {id: `search-item-${comic.index}-desc`})
 
     appendChildren(titleDiv, icon, titleSpan)
-    appendChildren(resultDiv, titleDiv, issueSpan)
+    appendChildren(resultDiv, titleDiv, descDiv)
     searchDiv.appendChild(resultDiv)
   }
 
@@ -785,7 +778,7 @@ function buildDescription(evt) {
 
   loader('start')
   //Scroll the selected section to the top of the page in a fancy slow move
-  if (evt.section !== 'search' && evt.section !=='mostview') scrollSection(qi(`${evt.section}`))
+  if (!evt.section.match('search') && evt.section !=='mostview') scrollSection(qi(`${evt.section}`))
   const descId = `${evt.section}-desc`
   const comicLink = (() => {
     const lnk = evt.link.split('/')
@@ -1110,7 +1103,7 @@ function buildDescription(evt) {
 
 function scrollSection(section) {
   const currentScroll = reader.scrollTop
-  const sectionScroll = section === 'search' ? 0 : section.offsetTop - 65
+  const sectionScroll = section.match('search') ? 0 : section.offsetTop - 65
 
   if (sectionScroll <= currentScroll - 5) {
     reader.scrollTop -= 3
@@ -1582,7 +1575,8 @@ ipc.on('download', (e, a) => {
 
 function bgRender(src, preload, listeners, dev = false) {
   // There should never be two hidden webviews
-  if (qi('hidden').querySelector('webview')) return
+  const webviewExists = hidden.querySelector('webview')
+  if (webviewExists) hidden.removeChild(webviewExists)
   loaded = false
   if (!listeners['load-commit']) listeners['load-commit'] = loadCommit
   const backgroundWebview = create('webview', {src: src, preload: preload}, listeners)
