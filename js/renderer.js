@@ -225,7 +225,7 @@ function search() {
     const resultDiv = create('div', {class: 'search-table'})
     const icon = create('span', {class: ['fas', 'fa-info-circle']}, {
       'click': () => navigation('description', {
-        section: 'search',
+        section: `search-item-${comic.index}`,
         link: comic.link,
         view: 'd'
       })
@@ -233,7 +233,10 @@ function search() {
     const titleSpan = create('span', {
       textContent: comic.title,
       style: {marginLeft: '10px'}
-    }, {'click': () => navigation('description', {section: `search-item-${comic.index}`, link: comic.link, view: 'd'})})
+    }, {'click': () => navigation('description', {
+      section: `search-item-${comic.index}`,
+      link: comic.link,
+      view: 'd'})})
     const titleDiv = create('div', {class: 'search-table_item'})
     const descDiv = create('div', {id: `search-item-${comic.index}-desc`})
 
