@@ -14,3 +14,5 @@ List of things to complete (in no particular order):
 0) Database for in-comic ads
 0) Shareable link / ability to open from link
 0) Error handling for things like no internet or for the preloads not returning anything in a timely fashion
+0) Allow for saving search results
+0) Update search functions to not have to get information if the link is clicked again while the information already exists
