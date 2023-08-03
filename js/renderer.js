@@ -236,7 +236,7 @@ function search() {
     }, {'click': () => navigation('description', {
       section: `search-item-${comic.index}`,
       link: comic.link,
-      view: 'd'})})
+      view: 'i'})})
     const titleDiv = create('div', {class: 'search-table_item'})
     const descDiv = create('div', {id: `search-item-${comic.index}-desc`})
 
@@ -1001,6 +1001,8 @@ function buildDescription(evt) {
     toggleView(view)
 
     function onclick(e) {
+      q('#search-results').innerHTML = ''
+      q('#search-input').value = ''
       currentComic.title = comicTitle
       currentComic.cover = comicCover
       currentComic.link = comicLink
@@ -1614,16 +1616,14 @@ function toast(msg) {
 function loader(type, dark = false, time = 30) {
   time = time * 1000
 
-  loaderTimeout = l => {
+  loaderTimeout = () => {
     setTimeout(function() {
-      if (l) {
+      if (loaderLoading) {
         loader('stop')
         failLoad()
       }
     }, time)
   }
-
-  loaderTimeout()
 
   function failLoad() {
     const body = q('body')
@@ -1646,7 +1646,6 @@ function loader(type, dark = false, time = 30) {
     p.innerText = 'Error with that request.'
     const button = create('button', {type: 'text', style: {display: 'inline'}}, {
       'click': () => {
-        console.log('clicking button')
         loader('start', true)
         if (qi('hidden')) qi('hidden').removeChild(qi('hidden').querySelector('webview'))
         mainRender()
@@ -1660,6 +1659,7 @@ function loader(type, dark = false, time = 30) {
   }
   if (type === 'start') {
     loaderLoading = true
+    loaderTimeout()
     if (q('.loader')) return
     const loadScreen = dark
       ? create('div', {class: 'loader', style: {backgroundColor: 'black'}}, {'click': e => e.preventDefault()})
@@ -1669,8 +1669,8 @@ function loader(type, dark = false, time = 30) {
     loadScreen.appendChild(spinner)
     document.body.appendChild(loadScreen)
   } else if (type === 'stop') {
-    loaderLoading = false
     clearTimeout.call(this, loaderTimeout)
+    loaderLoading = false
     if (!q('.loader')) return
     document.body.removeChild(q('.loader'))
   }
