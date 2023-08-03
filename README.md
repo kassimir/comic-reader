@@ -7,12 +7,12 @@ This is an Electron-based program to read comic books from http://readcomiconlin
 That being said, I've actually picked up books that I normally never would have bought, simply because I read them for free and decided to add them to my collection.
 
 Bug!
-0) X-Men: Endangered Species TPB (Part 1): that combo needs added to the issues list!
+* X-Men: Endangered Species TPB (Part 1): that combo needs added to the issues list!
 
 List of things to complete (in no particular order):
-0) Automatic updates
-0) Database for in-comic ads
-0) Shareable link / ability to open from link
-0) Error handling for things like no internet or for the preloads not returning anything in a timely fashion
-0) Allow for saving search results
-0) Update search functions to not have to get information if the link is clicked again while the information already exists
+* Automatic updates
+* Database for in-comic ads
+* Shareable link / ability to open from link
+* Error handling for things like no internet or for the preloads not returning anything in a timely fashion
+* Allow for saving search results
+* Update search functions to not have to get information if the link is clicked again while the information already exists
