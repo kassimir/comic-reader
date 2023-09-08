@@ -1616,14 +1616,15 @@ function toast(msg) {
 function loader(type, dark = false, time = 30) {
   time = time * 1000
 
-  loaderTimeout = () => {
-    setTimeout(function() {
+  if (loaderTimeout) clearTimeout(loaderTimeout)
+
+  loaderTimeout =
+    setTimeout.bind(this, function() {
       if (loaderLoading) {
         loader('stop')
         failLoad()
       }
     }, time)
-  }
 
   function failLoad() {
     const body = q('body')
