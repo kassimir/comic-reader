@@ -70,6 +70,10 @@ const send = (msg = '', channel = 'default', type = 'h', sync = false) => {
   else ipcMain.send(channel, msg)
 }
 
+const log = (msg) => {
+  send(msg, 'msg')
+}
+
 // This will grab various parts of the Comic itself based off
 // of the Comic issue title. For instance Deadpool (2008) Issue #69
 // txt = Comic issue title text
@@ -204,13 +208,14 @@ function compareDBs(db1, db2) {
 }
 
 module.exports = {
-  q: q,
-  qi: qi,
-  qc: qc,
-  send: send,
-  create: create,
-  getOrRemoveIssue: getOrRemoveIssue,
-  sortIssues: sortIssues,
-  appendChildren: appendChildren,
-  compareDBs: compareDBs
+  q,
+  qi,
+  qc,
+  send,
+  log,
+  create,
+  getOrRemoveIssue,
+  sortIssues,
+  appendChildren,
+  compareDBs
 }

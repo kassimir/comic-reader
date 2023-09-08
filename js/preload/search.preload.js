@@ -1,22 +1,26 @@
-const send = require('../utils').send
+const utils = require('../utils')
+const send = utils.send
+const log = utils.log
 
 window.addEventListener('DOMContentLoaded', onload)
 
 function onload() {
   const searchResults = document.querySelector('.list-comic')
   if (!searchResults || !searchResults.innerHTML) {
+
+    // If there's only one search result, it returns the actual comic
+    // so instead of duplicating code from description.preload, I've decided
+    // to just destroy the search and go with the description. It doesn't
+    // seem to add much time to the render for me, but if it does cause
+    // issues, I could see rewriting it.
+    if (document.querySelector('#rightside img')) {
+      log('single result')
+      send({link: window.location.href, cover: document.querySelector('#rightside img').src}, 'desc')
+      return
+    }
+
     if (document.querySelector('.barContent').innerText.trim() !== 'Not found') setTimeout(onload, 1000)
     else send('', 'nf')
-    return
-  }
-
-  // If there's only one search result, it returns the actual comic
-  // so instead of duplicating code from description.preload, I've decided
-  // to just destroy the search and go with the description. It doesn't
-  // seem to add much time to the render for me, but if it does cause
-  // issues, I could see rewriting it.
-   if (document.querySelector('#rightside img')) {
-    send({link: window.location.href, cover: document.querySelector('#rightside img').src}, 'desc')
     return
   }
 
@@ -35,11 +39,7 @@ function onload() {
     function getURI(txt) {
       const startHref = txt.match('href=').index + 6;
       const endHref = txt.match('">\n').index;
-      return 'https://readcomiconline.to' + txt.slice(startHref, endHref);
+      return 'http://readcomiconline.li' + txt.slice(startHref, endHref);
     }
   })
-}
-
-function log(...m) {
-  send(m.join(' '), 'msg')
 }

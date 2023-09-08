@@ -200,6 +200,7 @@ function search() {
   q('#search-results').appendChild(closeSearchDiv)
 
   function ipcMessage(e) {
+    console.log(e)
     if (e.channel === 'end') {
       closeSearchDiv.style.visibility = 'visible'
       clearHidden()
@@ -1107,8 +1108,12 @@ function buildDescription(evt) {
 }
 
 function scrollSection(section) {
+  if (!section) return;
+  const sectionId = section.match ? section : section.id;
+  if (!sectionId.match) return;
   const currentScroll = reader.scrollTop
-  const sectionScroll = section.match('search') ? 0 : section.offsetTop - 65
+  // const sectionScroll = section.match('search') ? 0 : section.offsetTop - 65
+  const sectionScroll = sectionId.match('search') ? 0 : section.offsetTop - 65
 
   if (sectionScroll <= currentScroll - 5) {
     reader.scrollTop -= 3
@@ -1648,7 +1653,10 @@ function loader(type, dark = false, time = 30) {
     const button = create('button', {type: 'text', style: {display: 'inline'}}, {
       'click': () => {
         loader('start', true)
-        if (qi('hidden')) qi('hidden').removeChild(qi('hidden').querySelector('webview'))
+        if (qi('hidden')) {
+          const childExists = qi('hidden').querySelector('webview')
+          if (childExists) qi('hidden').removeChild(qi('hidden').querySelector('webview'))
+        }
         mainRender()
         body.removeChild(div)
       }
