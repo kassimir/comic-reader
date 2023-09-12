@@ -1352,7 +1352,6 @@ function changeSort(sectionId) {
 
 function buildComic(evt) {
   loader('start', true, 300)
-  // Save to Recently Read database
   // Set up Home and download button
 
   qi('home-download').style.visibility = 'visible'
@@ -1632,6 +1631,7 @@ function loader(type, dark = false, time = 30) {
     }, time)
 
   function failLoad() {
+    return
     const body = q('body')
     const div = create('div', {
       id: 'load-error',

@@ -4,6 +4,8 @@ const path = require('path')
 const send = require('./utils').send
 const axios = require('axios')
 
+const DATABASE_MAX_LENGTH = 30
+
 // opts:
 //   type: array or object
 //   createNew: bool => creates new if db doesn't exist
@@ -103,26 +105,58 @@ function writeRecent(comic, link) {
   // and this will keep from fucking over the Recent section
   if (!comic.cover || !comic.link) return
 
+  // get recent database
   const recentDB = JSON.parse(fs.readFileSync('./database/recent.database.json').toString())
-  const l = Object.keys(recentDB).length
-  if (!recentDB[comic.title]) {
-    recentDB[comic.title] = {position: l, link: comic.link, cover: comic.cover, issues: {[comic.issue]: link}}
+  // get length
+  const databaseLength = Object.keys(recentDB).length
+  // if title isn't already in recent database, and it hasn't reached max length
+  if (!recentDB[comic.title] && databaseLength < DATABASE_MAX_LENGTH) {
+    // add it to the database
+    recentDB[comic.title] = {position: databaseLength, link: comic.link, cover: comic.cover, issues: {[comic.issue]: link}}
   } else {
-    recentDB[comic.title].issues[comic.issue] = link
-    recentDB[comic.title].position = l
+    // if title is in database but needs position update
+    if (recentDB[comic.title]) {
+      // set index
+      let foundComicIndex = recentDB[comic.title].position
+      // loop object
+      Object.entries(recentDB).forEach(([key, value]) => {
+        // set new position for most recent comic
+        if (value.position === foundComicIndex) recentDB[key].position = DATABASE_MAX_LENGTH - 1
+        // update comics with that had higher position
+        else if (value.position > foundComicIndex) {
+          // unless it finds the comic we just updated, which is unlikely,
+          // but no harm in adding failsafes
+          if (value.title === comic.title) return
+
+          // update position
+          recentDB[key].position -= 1
+        }
+      })
+    } else {
+      // new comic being added to database
+      // loop through object
+      Object.entries(recentDB).forEach(([key, value]) => {
+        // remove the first item in the database to make room for new one
+        if (!value.position) {
+          delete recentDB[key]
+          return
+        }
+        // update position on the rest
+        recentDB[key].position -= 1
+      })
+      // add new comic at the end
+      // NOTE: databaseLength - 1 should equal DATABASE_MAX_LENGTH
+      recentDB[comic.title] = {
+        position: databaseLength - 1,
+        link: comic.link,
+        cover: comic.cover,
+        issues: {[comic.issue]: link}
+      }
+    }
   }
 
-  if (Object.keys(recentDB).length > 30) {
-    const newCurrentList = {}
-    const sortedRecent = Object.keys(recentDB).sort( (a, b) => {
-      return new Date(recentDB[b].position) - new Date(recentDB[a].position)
-    }).splice(0, 30)
-
-    sortedRecent.forEach( c => {
-      newCurrentList[c] = recentDB[c]
-    })
-    rewriteDB('recent', newCurrentList)
-  } else rewriteDB('recent', recentDB)
+  // rewrite db (self-explaining code)
+  rewriteDB('recent', recentDB)
 }
 
 function readDB(db) {
