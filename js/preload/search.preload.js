@@ -1,6 +1,5 @@
 const utils = require('../utils')
 const send = utils.send
-const log = utils.log
 
 window.addEventListener('DOMContentLoaded', onload)
 
@@ -14,7 +13,6 @@ function onload() {
     // seem to add much time to the render for me, but if it does cause
     // issues, I could see rewriting it.
     if (document.querySelector('#rightside img')) {
-      log('single result')
       send({link: window.location.href, cover: document.querySelector('#rightside img').src}, 'desc')
       return
     }

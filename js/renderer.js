@@ -766,6 +766,7 @@ function navigation(page, e) {
 }
 
 function buildDescription(evt) {
+  console.log('EVT: ', evt)
   if (evt.nf) {
     loader('stop')
     const descContainer = create('div', {style: {padding: '12px', border: '#5E051D 2px solid', marginBottom: '10px', display: 'flex', justifyContent: 'flex-start'}})
@@ -881,8 +882,11 @@ function buildDescription(evt) {
         optionsContainer.appendChild(addToGroup)
       }
     } else {
+      let textContent;
+      if (evt.section.match('search')) textContent = 'Add to Group'
+      else textContent = evt.section === 'reading' ? 'Remove from Reading List' : `Remove from Group`
       optionsContainer.appendChild(removeIcon)
-      removeFromGroup.textContent = evt.section === 'reading' ? 'Remove from Reading List' : `Remove from Group`
+      removeFromGroup.textContent = textContent
       removeFromGroup.addEventListener('click', () => removeComicFromGroup(evt.section))
       optionsContainer.appendChild(removeFromGroup)
     }
