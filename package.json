@@ -11,7 +11,7 @@
   "repository": "https://github.com/kassimir/comic-reader",
   "author": "kassimir",
   "devDependencies": {
-    "electron": "^1.8.4",
+    "electron": "^22.3.25",
     "electron-builder": "^20.44.4",
     "request": "^2.88.0"
   },
